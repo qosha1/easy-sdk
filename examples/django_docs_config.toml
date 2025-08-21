@@ -1,0 +1,74 @@
+# Django API Documentation Generator Configuration
+# Complete configuration example with all available options
+
+[project]
+name = "My Django API"
+version = "1.0.0"
+description = "Auto-generated API documentation for My Django API"
+author = "Your Name <your.email@example.com>"
+
+# Django project settings
+# django_settings_module = "myproject.settings"  # Optional: specific settings module
+
+# App filtering - include/exclude specific Django apps
+[apps]
+# include = ["api", "users", "products"]  # Optional: only include these apps
+exclude = ["admin", "debug_toolbar"]      # Apps to exclude from documentation
+
+# Endpoint filtering
+[endpoints]
+exclude_patterns = [
+    "/admin/",
+    "/debug/",
+    "/__debug__/",
+    "/static/",
+    "/media/"
+]
+
+# AI configuration for enhanced analysis
+[ai]
+provider = "openai"  # Options: "openai", "anthropic", "local"
+model = "gpt-4"      # Model to use (gpt-4, gpt-3.5-turbo, claude-3-sonnet, etc.)
+# api_key = "your-api-key-here"  # Optional: set via environment variable instead
+max_tokens = 4000
+temperature = 0.1
+timeout = 60  # Request timeout in seconds
+
+# Documentation generation options
+[generation]
+include_examples = true                    # Include request/response examples
+generate_postman_collection = true        # Generate Postman collection
+include_internal_endpoints = false        # Include internal/debug endpoints
+typescript_strict_mode = true             # Generate strict TypeScript types
+max_depth = 10                            # Maximum nesting depth for serializers
+
+# Sphinx-specific options
+[generation.sphinx_theme_options]
+github_url = "https://github.com/myorg/myproject"
+show_powered_by = false
+sidebar_width = "240px"
+page_width = "1200px"
+show_sourcelink = true
+
+# Output configuration
+[output]
+base_output_dir = "./docs"
+sphinx_output_dir = "./docs/api"
+typescript_output_dir = "./frontend/src/types"
+static_output_dir = "./docs/_static"
+
+# File naming patterns
+typescript_filename_pattern = "{app_name}.d.ts"
+sphinx_filename_pattern = "{app_name}.rst"
+
+# Advanced options
+[advanced]
+verbose = false              # Enable verbose logging
+dry_run = false             # Perform analysis without generating files
+parallel_processing = true  # Enable parallel processing
+max_workers = 4             # Maximum number of worker threads
+
+# Custom field type mappings (Django field -> TypeScript type)
+[custom_type_mappings]
+# "MyCustomField" = "string"
+# "SpecialIntegerField" = "number"
