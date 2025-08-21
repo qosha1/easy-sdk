@@ -5,7 +5,7 @@ Unit tests for Django project scanner
 import pytest
 from pathlib import Path
 
-from django_docs_generator.analyzers.django_scanner import DjangoProjectScanner, AppInfo
+from easy_sdk.analyzers.django_scanner import DjangoProjectScanner, AppInfo
 
 
 class TestDjangoProjectScanner:

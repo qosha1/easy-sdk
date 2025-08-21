@@ -5,7 +5,7 @@ Unit tests for serializer analyzer
 import pytest
 from pathlib import Path
 
-from django_docs_generator.analyzers.serializer_analyzer import (
+from easy_sdk.analyzers.serializer_analyzer import (
     SerializerAnalyzer, SerializerField, SerializerInfo
 )
 

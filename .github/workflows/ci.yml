@@ -56,27 +56,27 @@ jobs:
 
     - name: Run linting
       run: |
-        flake8 src/django_docs_generator --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 src/django_docs_generator --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+        flake8 src/easy_sdk --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 src/easy_sdk --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
 
     - name: Run type checking
       run: |
-        mypy src/django_docs_generator --ignore-missing-imports --no-strict-optional || true
+        mypy src/easy_sdk --ignore-missing-imports --no-strict-optional || true
 
     - name: Run security scan
       run: |
-        bandit -r src/django_docs_generator -f json || true
+        bandit -r src/easy_sdk -f json || true
 
     - name: Run tests with pytest
       run: |
-        pytest tests/ -v --cov=src/django_docs_generator --cov-report=xml --cov-report=term-missing
+        pytest tests/ -v --cov=src/easy_sdk --cov-report=xml --cov-report=term-missing
       env:
         DJANGO_VERSION: ${{ matrix.django-version }}
 
     - name: Test CLI functionality
       run: |
-        django-docs-generator --help
-        django-docs-generator --version
+        easy-sdk --help
+        easy-sdk --version
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
@@ -109,14 +109,14 @@ jobs:
     - name: Test AI provider imports
       run: |
         python -c "
-        from django_docs_generator.ai.providers import OpenAIProvider, AnthropicProvider, LocalProvider
+        from easy_sdk.ai.providers import OpenAIProvider, AnthropicProvider, LocalProvider
         print('✅ All AI providers import successfully')
         "
 
     - name: Test configuration with AI providers
       run: |
         python -c "
-        from django_docs_generator.core.config import Config
+        from easy_sdk.core.config import Config
         config = Config()
         config.ai_provider = 'openai'
         config.ai_model = 'gpt-4'
@@ -144,8 +144,8 @@ jobs:
     - name: Test Sphinx documentation generation
       run: |
         python -c "
-        from django_docs_generator.generators.sphinx_generator import SphinxGenerator
-        from django_docs_generator.core.config import Config
+        from easy_sdk.generators.sphinx_generator import SphinxGenerator
+        from easy_sdk.core.config import Config
         config = Config()
         generator = SphinxGenerator(config)
         print('✅ Sphinx generator initializes successfully')
@@ -154,8 +154,8 @@ jobs:
     - name: Test TypeScript generation
       run: |
         python -c "
-        from django_docs_generator.generators.typescript_generator import TypeScriptGenerator
-        from django_docs_generator.core.config import Config
+        from easy_sdk.generators.typescript_generator import TypeScriptGenerator
+        from easy_sdk.core.config import Config
         config = Config()
         generator = TypeScriptGenerator(config)
         print('✅ TypeScript generator initializes successfully')
@@ -164,7 +164,7 @@ jobs:
     - name: Test template rendering
       run: |
         python -c "
-        from django_docs_generator.templates.template_engine import TemplateEngine
+        from easy_sdk.templates.template_engine import TemplateEngine
         engine = TemplateEngine()
         print('✅ Template engine initializes successfully')
         "
@@ -199,8 +199,8 @@ jobs:
     - name: Test installation from built package
       run: |
         pip install dist/*.whl
-        django-docs-generator --version
-        python -c "import django_docs_generator; print(f'Installed version: {django_docs_generator.__version__}')"
+        easy-sdk --version
+        python -c "import easy_sdk; print(f'Installed version: {easy_sdk.__version__}')"
 
     - name: Store build artifacts
       uses: actions/upload-artifact@v4

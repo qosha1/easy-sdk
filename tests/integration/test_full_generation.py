@@ -5,7 +5,7 @@ Integration tests for full documentation generation workflow
 import pytest
 from pathlib import Path
 
-from django_docs_generator.core.generator import DjangoDocsGenerator
+from easy_sdk.core.generator import DjangoDocsGenerator
 
 
 class TestFullGeneration:
@@ -132,7 +132,7 @@ class TestFullGeneration:
     def test_configuration_override(self, temp_django_project):
         """Test configuration parameter overrides"""
         # Create generator with inline config
-        from django_docs_generator.core.config import DjangoDocsConfig
+        from easy_sdk.core.config import DjangoDocsConfig
         
         config = DjangoDocsConfig(
             project_path=temp_django_project,

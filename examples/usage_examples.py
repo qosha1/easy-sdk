@@ -8,7 +8,7 @@ in your Python applications and scripts.
 import os
 from pathlib import Path
 
-from django_docs_generator import DjangoDocsGenerator, DjangoDocsConfig
+from easy_sdk import DjangoDocsGenerator, DjangoDocsConfig
 
 
 def example_basic_usage():
@@ -170,7 +170,7 @@ def example_configuration_from_file():
     
     if not config_file.exists():
         print(f"⚠️ Configuration file not found: {config_file}")
-        print("Create one using: django-docs-generator init-config django_docs_config.toml")
+        print("Create one using: easy-sdk init-config django_docs_config.toml")
         return
     
     # Load configuration from file

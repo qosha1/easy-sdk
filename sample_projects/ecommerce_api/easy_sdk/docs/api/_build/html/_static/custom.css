@@ -1,0 +1,75 @@
+
+/* Custom styles for Django API Documentation */
+
+.api-endpoint {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.api-method {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    margin-right: 0.5rem;
+}
+
+.api-method.get {
+    background-color: #28a745;
+    color: white;
+}
+
+.api-method.post {
+    background-color: #007bff;
+    color: white;
+}
+
+.api-method.put {
+    background-color: #ffc107;
+    color: black;
+}
+
+.api-method.patch {
+    background-color: #fd7e14;
+    color: white;
+}
+
+.api-method.delete {
+    background-color: #dc3545;
+    color: white;
+}
+
+.api-path {
+    font-family: 'Courier New', monospace;
+    background-color: #e9ecef;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.field-type {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.required-field {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.optional-field {
+    color: #28a745;
+}
+
+.code-example {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    font-family: 'Courier New', monospace;
+    white-space: pre-wrap;
+}

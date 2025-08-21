@@ -44,21 +44,21 @@ jobs:
     - name: Lint with flake8
       run: |
         # Stop the build if there are Python syntax errors or undefined names
-        flake8 src/django_docs_generator --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 src/easy_sdk --count --select=E9,F63,F7,F82 --show-source --statistics
         # Exit with warning on other issues
-        flake8 src/django_docs_generator --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+        flake8 src/easy_sdk --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
     
     - name: Type checking with mypy
       run: |
-        mypy src/django_docs_generator --ignore-missing-imports --no-strict-optional || true
+        mypy src/easy_sdk --ignore-missing-imports --no-strict-optional || true
     
     - name: Security check with bandit
       run: |
-        bandit -r src/django_docs_generator -f json || true
+        bandit -r src/easy_sdk -f json || true
     
     - name: Run tests with pytest
       run: |
-        pytest tests/ --cov=src/django_docs_generator --cov-report=xml --cov-report=term-missing
+        pytest tests/ --cov=src/easy_sdk --cov-report=xml --cov-report=term-missing
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
@@ -95,7 +95,7 @@ jobs:
       id: version
       run: |
         # Get current version from __init__.py
-        CURRENT_VERSION=$(grep "__version__" src/django_docs_generator/__init__.py | cut -d'"' -f2)
+        CURRENT_VERSION=$(grep "__version__" src/easy_sdk/__init__.py | cut -d'"' -f2)
         echo "Current version: $CURRENT_VERSION"
         
         # Split version into parts
@@ -112,7 +112,7 @@ jobs:
         echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
         
         # Update version in __init__.py (pyproject.toml now reads from this dynamically)
-        sed -i "s/__version__ = \"$CURRENT_VERSION\"/__version__ = \"$NEW_VERSION\"/" src/django_docs_generator/__init__.py
+        sed -i "s/__version__ = \"$CURRENT_VERSION\"/__version__ = \"$NEW_VERSION\"/" src/easy_sdk/__init__.py
     
     - name: Build package
       run: |
@@ -132,7 +132,7 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add src/django_docs_generator/__init__.py
+        git add src/easy_sdk/__init__.py
         if git diff --staged --quiet; then
           echo "No changes to commit"
         else
@@ -166,12 +166,12 @@ jobs:
     
     - name: Check if version exists on PyPI
       run: |
-        pip index versions django-docs-generator || echo "Package not found on PyPI (this is okay for first upload)"
+        pip index versions easy-sdk || echo "Package not found on PyPI (this is okay for first upload)"
     
     - name: Publish to PyPI
       env:
         TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
       run: |
         twine upload dist/* --verbose
     
@@ -194,7 +194,7 @@ jobs:
           
           ### Installation
           ```bash
-          pip install django-docs-generator==${{ needs.build.outputs.version }}
+          pip install easy-sdk==${{ needs.build.outputs.version }}
           ```
           
           Full Changelog: https://github.com/${{ github.repository }}/commits/main

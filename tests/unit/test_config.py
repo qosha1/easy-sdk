@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from django_docs_generator.core.config import DjangoDocsConfig, AIConfig, GenerationConfig
+from easy_sdk.core.config import DjangoDocsConfig, AIConfig, GenerationConfig
 
 
 class TestDjangoDocsConfig:

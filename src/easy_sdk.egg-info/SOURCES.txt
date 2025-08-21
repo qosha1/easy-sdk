@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+src/easy_sdk/__init__.py
+src/easy_sdk.egg-info/PKG-INFO
+src/easy_sdk.egg-info/SOURCES.txt
+src/easy_sdk.egg-info/dependency_links.txt
+src/easy_sdk.egg-info/entry_points.txt
+src/easy_sdk.egg-info/requires.txt
+src/easy_sdk.egg-info/top_level.txt
+src/easy_sdk/templates/__init__.py

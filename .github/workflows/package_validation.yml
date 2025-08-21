@@ -30,8 +30,8 @@ jobs:
     
     - name: Run linting checks
       run: |
-        flake8 src/django_docs_generator --count --select=E9,F63,F7,F82 --show-source --statistics
-        mypy src/django_docs_generator --ignore-missing-imports || true
+        flake8 src/easy_sdk --count --select=E9,F63,F7,F82 --show-source --statistics
+        mypy src/easy_sdk --ignore-missing-imports || true
     
     - name: Run tests
       run: |
@@ -75,14 +75,14 @@ jobs:
         
         # Test basic import
         python -c "
-        import django_docs_generator as ddg
-        from django_docs_generator.core.config import Config
+        import easy_sdk as ddg
+        from easy_sdk.core.config import Config
         print('✅ Package installed and imports work')
         print(f'Version: {ddg.__version__}')
         "
         
         # Test CLI availability
-        django-docs-generator --help || echo '✅ CLI command available'
+        easy-sdk --help || echo '✅ CLI command available'
 
   security-scan:
     runs-on: ubuntu-latest
@@ -107,8 +107,8 @@ jobs:
     
     - name: Run bandit security scan
       run: |
-        bandit -r src/django_docs_generator/ -f json -o bandit-report.json || true
-        bandit -r src/django_docs_generator/ -f txt
+        bandit -r src/easy_sdk/ -f json -o bandit-report.json || true
+        bandit -r src/easy_sdk/ -f txt
     
     - name: Upload security scan results
       uses: actions/upload-artifact@v3

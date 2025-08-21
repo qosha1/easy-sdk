@@ -8,7 +8,7 @@ from typing import Dict, Any
 
 import pytest
 
-from django_docs_generator.core.config import DjangoDocsConfig
+from easy_sdk.core.config import DjangoDocsConfig
 
 
 @pytest.fixture

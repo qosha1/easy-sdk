@@ -5,8 +5,8 @@ Unit tests for documentation generators
 import pytest
 from pathlib import Path
 
-from django_docs_generator.generators.sphinx_generator import SphinxDocumentationGenerator
-from django_docs_generator.generators.typescript_generator import TypeScriptGenerator, TypeScriptType
+from easy_sdk.generators.sphinx_generator import SphinxDocumentationGenerator
+from easy_sdk.generators.typescript_generator import TypeScriptGenerator, TypeScriptType
 
 
 class TestSphinxDocumentationGenerator:

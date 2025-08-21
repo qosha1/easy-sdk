@@ -8,7 +8,7 @@ Thank you for your interest in contributing to the Django API Documentation Gene
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/django-docs-generator/django-api-docs-generator.git
+   git clone https://github.com/easy-sdk/django-api-docs-generator.git
    cd django-api-docs-generator
    ```
 
@@ -31,7 +31,7 @@ Thank you for your interest in contributing to the Django API Documentation Gene
 5. **Verify installation**
    ```bash
    pytest
-   django-docs-generator --version
+   easy-sdk --version
    ```
 
 ## 📋 Development Workflow
@@ -59,7 +59,7 @@ flake8 src/ tests/
 mypy src/
 
 # Run tests
-pytest --cov=src/django_docs_generator
+pytest --cov=src/easy_sdk
 ```
 
 ### Testing
@@ -71,7 +71,7 @@ We maintain comprehensive test coverage:
 pytest
 
 # Run with coverage report
-pytest --cov=src/django_docs_generator --cov-report=html
+pytest --cov=src/easy_sdk --cov-report=html
 
 # Run specific test file
 pytest tests/unit/test_config.py
@@ -109,7 +109,7 @@ pytest tests/integration/
    ```bash
    pytest
    # Test CLI functionality
-   django-docs-generator tests/fixtures/sample_project --dry-run
+   easy-sdk tests/fixtures/sample_project --dry-run
    ```
 
 ## 🏗️ Architecture Guidelines
@@ -117,7 +117,7 @@ pytest tests/integration/
 ### Code Organization
 
 ```
-src/django_docs_generator/
+src/easy_sdk/
 ├── core/              # Core functionality
 │   ├── config.py      # Configuration management
 │   └── generator.py   # Main generator class
@@ -147,7 +147,7 @@ src/django_docs_generator/
 
 #### New AI Provider
 
-1. Extend `AIAnalysisEngine` in `src/django_docs_generator/ai/engine.py`
+1. Extend `AIAnalysisEngine` in `src/easy_sdk/ai/engine.py`
 2. Add provider-specific client initialization
 3. Implement the API call method following existing patterns
 4. Add configuration options to `AIConfig`
@@ -155,7 +155,7 @@ src/django_docs_generator/
 
 #### New Documentation Generator
 
-1. Create new generator class in `src/django_docs_generator/generators/`
+1. Create new generator class in `src/easy_sdk/generators/`
 2. Follow the interface pattern established by existing generators
 3. Add generator to main `DjangoDocsGenerator` class
 4. Add CLI options for the new generator
@@ -163,7 +163,7 @@ src/django_docs_generator/
 
 #### New Analyzer
 
-1. Create analyzer class in `src/django_docs_generator/analyzers/`
+1. Create analyzer class in `src/easy_sdk/analyzers/`
 2. Follow existing analyzer patterns for data structures
 3. Integrate with the main scanning workflow
 4. Add configuration options if needed
