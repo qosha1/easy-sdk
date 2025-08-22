@@ -373,8 +373,22 @@ class DjangoProjectScanner:
         
         for model_file in model_files:
             try:
-                classes = self._extract_classes_from_file(Path(model_file), 'Model')
-                model_classes.extend(classes)
+                # Look for all Django model base classes
+                model_base_patterns = ['Model', 'AbstractUser', 'AbstractBaseUser', 'PermissionsMixin']
+                file_classes = []
+                
+                for pattern in model_base_patterns:
+                    classes = self._extract_classes_from_file(Path(model_file), pattern)
+                    file_classes.extend(classes)
+                
+                # Remove duplicates (same class might match multiple patterns)
+                seen_classes = set()
+                for class_info in file_classes:
+                    class_key = (class_info['name'], class_info['line'])
+                    if class_key not in seen_classes:
+                        seen_classes.add(class_key)
+                        model_classes.append(class_info)
+                        
             except Exception as e:
                 logger.warning(f"Failed to extract models from {model_file}: {str(e)}")
         

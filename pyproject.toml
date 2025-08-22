@@ -127,4 +127,3 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 addopts = "--cov=src/easy_sdk --cov-report=html --cov-report=term-missing"
-DJANGO_SETTINGS_MODULE = "tests.django_settings"
