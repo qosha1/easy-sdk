@@ -7,7 +7,7 @@ CategorySerializer
 
 Category serializer with hierarchical support
 
-**File:** ``sample_projects/ecommerce_api/products/serializers.py``
+**File:** ``products/serializers.py``
 
 
 **Inherits from:** serializers.ModelSerializer
@@ -45,6 +45,46 @@ Fields
 
 
 
+Example Usage
+^^^^^^^^^^^^^
+
+Python Usage:
+
+.. code-block:: python
+   :caption: Creating Category instance
+
+   from products.serializers import CategorySerializer
+   
+   # Create serializer instance
+   serializer = CategorySerializer(data=request.data)
+   if serializer.is_valid():
+       instance = serializer.save()
+   else:
+       print(serializer.errors)
+
+JavaScript/TypeScript Usage:
+
+.. code-block:: javascript
+   :caption: Frontend API Call
+
+   // Fetch category data
+   const response = await fetch('/api/products/category/', {
+     method: 'GET',
+     headers: {
+       'Content-Type': 'application/json',
+       'Authorization': `Bearer ${token}`
+     }
+   });
+   const data = await response.json();
+
+cURL Example:
+
+.. code-block:: bash
+   :caption: Command Line API Call
+
+   curl -X GET "http://localhost:8000/api/products/category/"      -H "Accept: application/json"      -H "Authorization: Bearer YOUR_TOKEN"
+
+
 
 
 BrandSerializer
@@ -52,7 +92,7 @@ BrandSerializer
 
 Brand serializer
 
-**File:** ``sample_projects/ecommerce_api/products/serializers.py``
+**File:** ``products/serializers.py``
 
 
 **Inherits from:** serializers.ModelSerializer
@@ -77,6 +117,46 @@ Fields
 
 
 
+Example Usage
+^^^^^^^^^^^^^
+
+Python Usage:
+
+.. code-block:: python
+   :caption: Creating Brand instance
+
+   from products.serializers import BrandSerializer
+   
+   # Create serializer instance
+   serializer = BrandSerializer(data=request.data)
+   if serializer.is_valid():
+       instance = serializer.save()
+   else:
+       print(serializer.errors)
+
+JavaScript/TypeScript Usage:
+
+.. code-block:: javascript
+   :caption: Frontend API Call
+
+   // Fetch brand data
+   const response = await fetch('/api/products/brand/', {
+     method: 'GET',
+     headers: {
+       'Content-Type': 'application/json',
+       'Authorization': `Bearer ${token}`
+     }
+   });
+   const data = await response.json();
+
+cURL Example:
+
+.. code-block:: bash
+   :caption: Command Line API Call
+
+   curl -X GET "http://localhost:8000/api/products/brand/"      -H "Accept: application/json"      -H "Authorization: Bearer YOUR_TOKEN"
+
+
 
 
 ProductImageSerializer
@@ -84,7 +164,7 @@ ProductImageSerializer
 
 Product image serializer
 
-**File:** ``sample_projects/ecommerce_api/products/serializers.py``
+**File:** ``products/serializers.py``
 
 
 **Inherits from:** serializers.ModelSerializer
@@ -96,6 +176,46 @@ Fields
 
 
 
+Example Usage
+^^^^^^^^^^^^^
+
+Python Usage:
+
+.. code-block:: python
+   :caption: Creating ProductImage instance
+
+   from products.serializers import ProductImageSerializer
+   
+   # Create serializer instance
+   serializer = ProductImageSerializer(data=request.data)
+   if serializer.is_valid():
+       instance = serializer.save()
+   else:
+       print(serializer.errors)
+
+JavaScript/TypeScript Usage:
+
+.. code-block:: javascript
+   :caption: Frontend API Call
+
+   // Fetch productimage data
+   const response = await fetch('/api/products/productimage/', {
+     method: 'GET',
+     headers: {
+       'Content-Type': 'application/json',
+       'Authorization': `Bearer ${token}`
+     }
+   });
+   const data = await response.json();
+
+cURL Example:
+
+.. code-block:: bash
+   :caption: Command Line API Call
+
+   curl -X GET "http://localhost:8000/api/products/productimage/"      -H "Accept: application/json"      -H "Authorization: Bearer YOUR_TOKEN"
+
+
 
 
 ProductListSerializer
@@ -103,7 +223,7 @@ ProductListSerializer
 
 Product serializer for list views (minimal data)
 
-**File:** ``sample_projects/ecommerce_api/products/serializers.py``
+**File:** ``products/serializers.py``
 
 
 **Inherits from:** serializers.ModelSerializer
@@ -193,6 +313,46 @@ Fields
 
 
 
+Example Usage
+^^^^^^^^^^^^^
+
+Python Usage:
+
+.. code-block:: python
+   :caption: Creating ProductList instance
+
+   from products.serializers import ProductListSerializer
+   
+   # Create serializer instance
+   serializer = ProductListSerializer(data=request.data)
+   if serializer.is_valid():
+       instance = serializer.save()
+   else:
+       print(serializer.errors)
+
+JavaScript/TypeScript Usage:
+
+.. code-block:: javascript
+   :caption: Frontend API Call
+
+   // Fetch productlist data
+   const response = await fetch('/api/products/productlist/', {
+     method: 'GET',
+     headers: {
+       'Content-Type': 'application/json',
+       'Authorization': `Bearer ${token}`
+     }
+   });
+   const data = await response.json();
+
+cURL Example:
+
+.. code-block:: bash
+   :caption: Command Line API Call
+
+   curl -X GET "http://localhost:8000/api/products/productlist/"      -H "Accept: application/json"      -H "Authorization: Bearer YOUR_TOKEN"
+
+
 
 
 ProductDetailSerializer
@@ -200,7 +360,7 @@ ProductDetailSerializer
 
 Product serializer for detail views (complete data)
 
-**File:** ``sample_projects/ecommerce_api/products/serializers.py``
+**File:** ``products/serializers.py``
 
 
 **Inherits from:** serializers.ModelSerializer
@@ -329,6 +489,46 @@ Fields
 
 
 
+Example Usage
+^^^^^^^^^^^^^
+
+Python Usage:
+
+.. code-block:: python
+   :caption: Creating ProductDetail instance
+
+   from products.serializers import ProductDetailSerializer
+   
+   # Create serializer instance
+   serializer = ProductDetailSerializer(data=request.data)
+   if serializer.is_valid():
+       instance = serializer.save()
+   else:
+       print(serializer.errors)
+
+JavaScript/TypeScript Usage:
+
+.. code-block:: javascript
+   :caption: Frontend API Call
+
+   // Fetch productdetail data
+   const response = await fetch('/api/products/productdetail/', {
+     method: 'GET',
+     headers: {
+       'Content-Type': 'application/json',
+       'Authorization': `Bearer ${token}`
+     }
+   });
+   const data = await response.json();
+
+cURL Example:
+
+.. code-block:: bash
+   :caption: Command Line API Call
+
+   curl -X GET "http://localhost:8000/api/products/productdetail/"      -H "Accept: application/json"      -H "Authorization: Bearer YOUR_TOKEN"
+
+
 
 
 ProductCreateUpdateSerializer
@@ -336,7 +536,7 @@ ProductCreateUpdateSerializer
 
 Product serializer for create/update operations
 
-**File:** ``sample_projects/ecommerce_api/products/serializers.py``
+**File:** ``products/serializers.py``
 
 
 **Inherits from:** serializers.ModelSerializer
@@ -361,6 +561,46 @@ Fields
 
 
 
+Example Usage
+^^^^^^^^^^^^^
+
+Python Usage:
+
+.. code-block:: python
+   :caption: Creating ProductCreateUpdate instance
+
+   from products.serializers import ProductCreateUpdateSerializer
+   
+   # Create serializer instance
+   serializer = ProductCreateUpdateSerializer(data=request.data)
+   if serializer.is_valid():
+       instance = serializer.save()
+   else:
+       print(serializer.errors)
+
+JavaScript/TypeScript Usage:
+
+.. code-block:: javascript
+   :caption: Frontend API Call
+
+   // Fetch productcreateupdate data
+   const response = await fetch('/api/products/productcreateupdate/', {
+     method: 'GET',
+     headers: {
+       'Content-Type': 'application/json',
+       'Authorization': `Bearer ${token}`
+     }
+   });
+   const data = await response.json();
+
+cURL Example:
+
+.. code-block:: bash
+   :caption: Command Line API Call
+
+   curl -X GET "http://localhost:8000/api/products/productcreateupdate/"      -H "Accept: application/json"      -H "Authorization: Bearer YOUR_TOKEN"
+
+
 
 
 ProductSearchSerializer
@@ -368,7 +608,7 @@ ProductSearchSerializer
 
 Serializer for product search parameters
 
-**File:** ``sample_projects/ecommerce_api/products/serializers.py``
+**File:** ``products/serializers.py``
 
 
 **Inherits from:** serializers.Serializer
@@ -495,6 +735,46 @@ Fields
    
 
 
+
+
+Example Usage
+^^^^^^^^^^^^^
+
+Python Usage:
+
+.. code-block:: python
+   :caption: Creating ProductSearch instance
+
+   from products.serializers import ProductSearchSerializer
+   
+   # Create serializer instance
+   serializer = ProductSearchSerializer(data=request.data)
+   if serializer.is_valid():
+       instance = serializer.save()
+   else:
+       print(serializer.errors)
+
+JavaScript/TypeScript Usage:
+
+.. code-block:: javascript
+   :caption: Frontend API Call
+
+   // Fetch productsearch data
+   const response = await fetch('/api/products/productsearch/', {
+     method: 'GET',
+     headers: {
+       'Content-Type': 'application/json',
+       'Authorization': `Bearer ${token}`
+     }
+   });
+   const data = await response.json();
+
+cURL Example:
+
+.. code-block:: bash
+   :caption: Command Line API Call
+
+   curl -X GET "http://localhost:8000/api/products/productsearch/"      -H "Accept: application/json"      -H "Authorization: Bearer YOUR_TOKEN"
 
 
 

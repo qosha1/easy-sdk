@@ -1,0 +1,10 @@
+{
+  "label": "API Reference",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "title": "Django E-commerce API Reference",
+    "description": "Comprehensive API documentation for all endpoints in the Django e-commerce application.",
+    "slug": "/easy_sdk/api"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "label": "Orders API",
+  "position": 3, 
+  "link": {
+    "type": "doc",
+    "id": "easy_sdk/api/orders/index"
+  }
+}

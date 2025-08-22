@@ -1,0 +1,30 @@
+server_url: "http://localhost:8001"
+output_dir: "./docs"
+generator: "docusaurus"
+title: "E-commerce API Documentation"
+description: "Comprehensive API documentation for the sample e-commerce platform"
+version: "1.0.0"
+
+generation:
+  include_examples: true
+  include_authentication: true
+  auto_generate_models: true
+  extend_existing_docs: true
+
+security:
+  - type: "token"
+    name: "Token Authentication"
+    description: "Use Bearer token in Authorization header"
+    header_name: "Authorization"
+    prefix: "Token"
+
+endpoints:
+  include_patterns:
+    - "/api/*"
+  exclude_patterns:
+    - "/admin/*"
+
+customization:
+  primary_color: "#1976d2"
+  logo_url: ""
+  custom_css: ""

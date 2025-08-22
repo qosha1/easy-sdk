@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "easy-sdk"
-version = "0.1.0"
+version = "0.2.0"
 description = "AI-powered Django API documentation generator with Sphinx and TypeScript support"
 readme = "README.md"
 license = {text = "MIT"}
@@ -43,12 +43,15 @@ dependencies = [
     "astroid>=2.15.0",
     "rich>=13.0.0",
     "typing-extensions>=4.0.0",
+    "python-dotenv>=1.0.0"
 ]
 
 [project.optional-dependencies]
 ai = [
     "openai>=1.0.0",
     "anthropic>=0.7.0",
+    "langchain-openai>=0.2.0",
+    "langchain-core>=0.3.0",
 ]
 dev = [
     "pytest>=7.0.0",

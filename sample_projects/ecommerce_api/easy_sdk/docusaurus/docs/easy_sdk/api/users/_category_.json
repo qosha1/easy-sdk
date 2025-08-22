@@ -1,0 +1,8 @@
+{
+  "label": "Users API", 
+  "position": 2,
+  "link": {
+    "type": "doc",
+    "id": "easy_sdk/api/users/index"
+  }
+}

@@ -9,7 +9,7 @@ Version: 1.0.0
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-
+\n   easy_sdk/index\n
    apps/index
 
 

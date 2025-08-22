@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: easy-sdk
-Version: 0.1.0
+Version: 0.2.0
 Summary: AI-powered Django API documentation generator with Sphinx and TypeScript support
 Author-email: Django Docs Generator Team <contact@example.com>
 License: MIT
@@ -38,9 +38,12 @@ Requires-Dist: pydantic>=2.0.0
 Requires-Dist: astroid>=2.15.0
 Requires-Dist: rich>=13.0.0
 Requires-Dist: typing-extensions>=4.0.0
+Requires-Dist: python-dotenv>=1.0.0
 Provides-Extra: ai
 Requires-Dist: openai>=1.0.0; extra == "ai"
 Requires-Dist: anthropic>=0.7.0; extra == "ai"
+Requires-Dist: langchain-openai>=0.2.0; extra == "ai"
+Requires-Dist: langchain-core>=0.3.0; extra == "ai"
 Provides-Extra: dev
 Requires-Dist: pytest>=7.0.0; extra == "dev"
 Requires-Dist: pytest-django>=4.5.0; extra == "dev"

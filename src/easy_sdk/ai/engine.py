@@ -5,8 +5,10 @@ AI Analysis Engine for enhanced Django code understanding
 import asyncio
 import json
 import logging
+import os
 import re
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 try:
@@ -15,9 +17,19 @@ except ImportError:
     openai = None
 
 try:
+    from langchain_openai import ChatOpenAI
+except ImportError:
+    ChatOpenAI = None
+
+try:
     from anthropic import Anthropic
 except ImportError:
     Anthropic = None
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
 
 from ..core.config import DjangoDocsConfig
 from .prompts import PromptTemplates
@@ -60,8 +72,12 @@ class AIAnalysisEngine:
         self.ai_config = config.ai
         self.prompt_templates = PromptTemplates()
         
+        # Load environment variables from .env file
+        self._load_environment()
+        
         # Initialize AI clients
         self.openai_client = None
+        self.langchain_client = None
         self.anthropic_client = None
         
         if self.ai_config.provider == "openai":
@@ -72,23 +88,53 @@ class AIAnalysisEngine:
         # Rate limiting
         self._request_times = []
         self._max_requests_per_minute = 50
+    
+    def _load_environment(self) -> None:
+        """Load environment variables from .env file"""
+        if load_dotenv is None:
+            logger.debug("dotenv not available, skipping .env file loading")
+            return
+            
+        # Try to find .env file in common locations
+        env_paths = [
+            Path.cwd() / ".env",  # Current working directory
+            Path(__file__).parent.parent.parent.parent / ".env",  # Project root
+            self.config.project_path / ".env",  # Django project directory
+        ]
+        
+        for env_path in env_paths:
+            if env_path.exists():
+                logger.debug(f"Loading environment from: {env_path}")
+                load_dotenv(env_path)
+                return
+        
+        logger.debug("No .env file found in common locations")
         
     def _initialize_openai(self) -> None:
-        """Initialize OpenAI client"""
-        if openai is None:
-            logger.warning("OpenAI not installed. Install with: pip install 'easy-sdk[ai]'")
+        """Initialize OpenAI clients (both direct and LangChain)"""
+        if openai is None or ChatOpenAI is None:
+            logger.warning("OpenAI or LangChain not installed. Install with: pip install 'easy-sdk[ai]'")
             return
             
         try:
             api_key = self.ai_config.api_key or self._get_api_key_from_env("OPENAI_API_KEY")
             if api_key:
-                openai.api_key = api_key
-                self.openai_client = openai
-                logger.info("OpenAI client initialized")
+                # Initialize direct OpenAI client for Responses API
+                self.openai_client = openai.OpenAI(api_key=api_key)
+                
+                # Initialize LangChain OpenAI client for structured interactions
+                self.langchain_client = ChatOpenAI(
+                    api_key=api_key,
+                    model=self.ai_config.model,
+                    temperature=self.ai_config.temperature,
+                    max_tokens=self.ai_config.max_tokens,
+                    timeout=self.ai_config.timeout
+                )
+                logger.info("OpenAI clients initialized (direct + LangChain)")
             else:
                 logger.warning("OpenAI API key not found")
         except Exception as e:
-            logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+            logger.error(f"Failed to initialize OpenAI clients: {str(e)}")
     
     def _initialize_anthropic(self) -> None:
         """Initialize Anthropic client"""
@@ -108,15 +154,16 @@ class AIAnalysisEngine:
     
     def _get_api_key_from_env(self, env_var: str) -> Optional[str]:
         """Get API key from environment variable"""
-        import os
         return os.getenv(env_var)
     
-    def enhance_analysis(self, analysis_data: Dict[str, Any]) -> Dict[str, Any]:
+    def enhance_analysis(self, analysis_data: Dict[str, Any], progress=None, main_task=None) -> Dict[str, Any]:
         """
         Enhance structural analysis with AI insights
         
         Args:
             analysis_data: Results from Django structural analysis
+            progress: Rich progress instance for updates (optional)
+            main_task: Main task ID for progress updates (optional)
             
         Returns:
             Enhanced analysis data with AI insights
@@ -126,9 +173,20 @@ class AIAnalysisEngine:
         try:
             enhanced_data = analysis_data.copy()
             
+            # Get list of apps for progress calculation
+            apps_to_process = [(name, data) for name, data in analysis_data.items() if isinstance(data, dict)]
+            total_apps = len(apps_to_process)
+            
             # Process each app
-            for app_name, app_data in analysis_data.items():
+            for i, (app_name, app_data) in enumerate(apps_to_process):
                 logger.info(f"Running AI analysis for app: {app_name}")
+                
+                # Update progress description with current app
+                if progress and main_task:
+                    progress.update(
+                        main_task, 
+                        description=f"🧠 AI analysis: {app_name} ({i+1}/{total_apps})"
+                    )
                 
                 enhanced_app_data = self._enhance_app_analysis(app_name, app_data)
                 enhanced_data[app_name] = enhanced_app_data
@@ -380,38 +438,87 @@ class AIAnalysisEngine:
             # Prepare prompt
             prompt = self.prompt_templates.get_prompt(template_name, **context)
             
+            # Enhanced logging for AI calls
+            app_name = context.get('app_name', 'unknown')
+            context_info = f"app={app_name}"
+            if 'serializer_name' in context:
+                context_info += f", serializer={context['serializer_name']}"
+            elif 'view_name' in context:
+                context_info += f", view={context['view_name']}"
+            
+            logger.info(f"🤖 AI Call: {template_name} ({context_info}) -> {self.ai_config.provider}:{self.ai_config.model}")
+            if self.config.verbose:
+                logger.debug(f"AI Prompt length: {len(prompt)} chars")
+                logger.debug(f"AI Context keys: {list(context.keys())}")
+            
             # Call appropriate AI service
+            start_time = time.time()
             if self.ai_config.provider == "openai" and self.openai_client:
                 response = self._call_openai(prompt)
             elif self.ai_config.provider == "anthropic" and self.anthropic_client:
                 response = self._call_anthropic(prompt)
             else:
                 result.add_error("No AI provider configured or available")
+                logger.warning(f"❌ AI Call failed: No provider configured (requested: {self.ai_config.provider})")
                 return result
+            
+            call_duration = time.time() - start_time
             
             # Parse response
             result.enhanced_data = self._parse_ai_response(response)
             result.model_used = self.ai_config.model
             
+            # Log success with timing
+            response_length = len(response) if response else 0
+            logger.info(f"✅ AI Response: {template_name} completed in {call_duration:.2f}s ({response_length} chars)")
+            
         except Exception as e:
+            logger.error(f"❌ AI Call failed: {template_name} - {str(e)}")
             result.add_error(f"AI API call failed: {str(e)}")
         
         return result
     
     def _call_openai(self, prompt: str) -> str:
-        """Call OpenAI API"""
-        response = openai.ChatCompletion.create(
-            model=self.ai_config.model,
-            messages=[
-                {"role": "system", "content": "You are an expert Django developer and technical writer. Analyze the provided code and generate comprehensive, accurate documentation."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=self.ai_config.max_tokens,
-            temperature=self.ai_config.temperature,
-            timeout=self.ai_config.timeout
-        )
-        
-        return response.choices[0].message.content
+        """Call OpenAI Responses API"""
+        try:
+            # Try using the new Responses API first
+            response = self.openai_client.responses.create(
+                model=self.ai_config.model,
+                instructions="You are an expert Django developer and technical writer. Analyze the provided code and generate comprehensive, accurate documentation.",
+                input=prompt,
+                max_output_tokens=self.ai_config.max_tokens,
+                temperature=self.ai_config.temperature,
+                text={"format": {"type": "text"}},
+                store=True  # Store for better caching and optimization
+            )
+            
+            # Extract text from the new response format
+            if response.output and len(response.output) > 0:
+                first_output = response.output[0]
+                if hasattr(first_output, 'content') and len(first_output.content) > 0:
+                    first_content = first_output.content[0]
+                    if hasattr(first_content, 'text'):
+                        return first_content.text
+            
+            # Fallback to empty string if parsing fails
+            logger.warning("Could not extract text from Responses API response")
+            return ""
+            
+        except Exception as e:
+            # Fallback to LangChain client if Responses API fails
+            logger.debug(f"Responses API failed, falling back to LangChain: {str(e)}")
+            if self.langchain_client:
+                from langchain_core.messages import HumanMessage, SystemMessage
+                
+                messages = [
+                    SystemMessage(content="You are an expert Django developer and technical writer. Analyze the provided code and generate comprehensive, accurate documentation."),
+                    HumanMessage(content=prompt)
+                ]
+                
+                response = self.langchain_client.invoke(messages)
+                return response.content
+            else:
+                raise Exception(f"Both Responses API and LangChain failed: {str(e)}")
     
     def _call_anthropic(self, prompt: str) -> str:
         """Call Anthropic API"""

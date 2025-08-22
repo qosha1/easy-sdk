@@ -42,10 +42,22 @@ def setup_logging(verbose: bool) -> None:
 @click.option('--dry-run', is_flag=True, help='Perform analysis without generating files')
 @click.option('--typescript-only', is_flag=True, help='Generate only TypeScript definitions')
 @click.option('--sphinx-only', is_flag=True, help='Generate only Sphinx documentation')
+@click.option('--docusaurus-only', is_flag=True, help='Generate only Docusaurus documentation')
+@click.option('--format', '-f', type=click.Choice(['sphinx', 'docusaurus']), default='sphinx', help='Documentation format (default: sphinx)')
+@click.option('--extend-existing/--no-extend-existing', default=True, help='Extend existing documentation setups (default: true)')
+@click.option('--force-create-new', is_flag=True, help='Force creation of new documentation structure')
 @click.option('--ai-provider', type=click.Choice(['openai', 'anthropic', 'local']), help='AI provider for enhanced analysis')
 @click.option('--ai-model', help='AI model to use (e.g., gpt-4, claude-3)')
 @click.option('--no-ai', is_flag=True, help='Disable AI-powered analysis')
-@click.version_option(version='0.1.0', prog_name='easy-sdk')
+@click.option('--language', type=click.Choice(['typescript', 'javascript', 'python', 'java', 'csharp', 'go', 'rust', 'swift', 'kotlin']), default='typescript', help='Primary language template (default: typescript)')
+@click.option('--interface-naming', type=click.Choice(['snake_case', 'camelCase', 'PascalCase', 'kebab-case', 'SCREAMING_SNAKE', 'lowercase']), default='PascalCase', help='Primary interface naming convention (default: PascalCase)')
+@click.option('--property-naming', type=click.Choice(['snake_case', 'camelCase', 'PascalCase', 'kebab-case', 'SCREAMING_SNAKE', 'lowercase']), default='camelCase', help='Primary property naming convention (default: camelCase)')
+@click.option('--preserve-django-names', is_flag=True, help='Keep original Django field names without transformation')
+@click.option('--single-language-only', is_flag=True, help='Generate only the primary language (disables multi-language generation)')
+@click.option('--exclude-languages', multiple=True, type=click.Choice(['python', 'java', 'csharp', 'go', 'rust', 'swift', 'kotlin']), help='Languages to exclude from generation')
+@click.option('--single-naming-only', is_flag=True, help='Generate only the primary naming convention (disables variants)')
+@click.option('--exclude-naming', multiple=True, type=click.Choice(['snake_case', 'camelCase', 'PascalCase', 'kebab-case', 'SCREAMING_SNAKE', 'lowercase']), help='Naming conventions to exclude from generation')
+@click.version_option(version='0.2.0', prog_name='easy-sdk')
 def cli(
     ctx: click.Context,
     project_path: Optional[str],
@@ -57,9 +69,21 @@ def cli(
     dry_run: bool,
     typescript_only: bool,
     sphinx_only: bool,
+    docusaurus_only: bool,
+    format: str,
+    extend_existing: bool,
+    force_create_new: bool,
     ai_provider: Optional[str],
     ai_model: Optional[str],
     no_ai: bool,
+    language: str,
+    interface_naming: str,
+    property_naming: str,
+    preserve_django_names: bool,
+    single_language_only: bool,
+    exclude_languages: List[str],
+    single_naming_only: bool,
+    exclude_naming: List[str],
 ) -> None:
     """
     Django API Documentation Generator
@@ -88,9 +112,21 @@ def cli(
                 dry_run=dry_run,
                 typescript_only=typescript_only,
                 sphinx_only=sphinx_only,
+                docusaurus_only=docusaurus_only,
+                format=format,
+                extend_existing=extend_existing,
+                force_create_new=force_create_new,
                 ai_provider=ai_provider,
                 ai_model=ai_model,
-                no_ai=no_ai)
+                no_ai=no_ai,
+                language=language,
+                interface_naming=interface_naming,
+                property_naming=property_naming,
+                preserve_django_names=preserve_django_names,
+                single_language_only=single_language_only,
+                exclude_languages=exclude_languages,
+                single_naming_only=single_naming_only,
+                exclude_naming=exclude_naming)
         else:
             console.print("❌ Please provide a Django project path or use a subcommand.", style="red")
             console.print("Run 'easy-sdk --help' for more information.")
@@ -107,9 +143,21 @@ def cli(
 @click.option('--dry-run', is_flag=True, help='Perform analysis without generating files')
 @click.option('--typescript-only', is_flag=True, help='Generate only TypeScript definitions')
 @click.option('--sphinx-only', is_flag=True, help='Generate only Sphinx documentation')
+@click.option('--docusaurus-only', is_flag=True, help='Generate only Docusaurus documentation')
+@click.option('--format', '-f', type=click.Choice(['sphinx', 'docusaurus']), default='sphinx', help='Documentation format (default: sphinx)')
+@click.option('--extend-existing/--no-extend-existing', default=True, help='Extend existing documentation setups (default: true)')
+@click.option('--force-create-new', is_flag=True, help='Force creation of new documentation structure')
 @click.option('--ai-provider', type=click.Choice(['openai', 'anthropic', 'local']), help='AI provider for enhanced analysis')
 @click.option('--ai-model', help='AI model to use (e.g., gpt-4, claude-3)')
 @click.option('--no-ai', is_flag=True, help='Disable AI-powered analysis')
+@click.option('--language', '-l', type=click.Choice(['typescript', 'javascript', 'python', 'java', 'csharp', 'go', 'rust', 'swift', 'kotlin']), default='typescript', help='Primary language template (default: typescript)')
+@click.option('--interface-naming', type=click.Choice(['snake_case', 'camelCase', 'PascalCase', 'kebab-case', 'SCREAMING_SNAKE', 'lowercase']), default='PascalCase', help='Primary interface naming convention (default: PascalCase)')
+@click.option('--property-naming', type=click.Choice(['snake_case', 'camelCase', 'PascalCase', 'kebab-case', 'SCREAMING_SNAKE', 'lowercase']), default='camelCase', help='Primary property naming convention (default: camelCase)')
+@click.option('--preserve-django-names', is_flag=True, help='Keep original Django field names without transformation')
+@click.option('--single-language-only', is_flag=True, help='Generate only the primary language (disables multi-language generation)')
+@click.option('--exclude-languages', multiple=True, type=click.Choice(['python', 'java', 'csharp', 'go', 'rust', 'swift', 'kotlin']), help='Languages to exclude from generation')
+@click.option('--single-naming-only', is_flag=True, help='Generate only the primary naming convention (disables variants)')
+@click.option('--exclude-naming', multiple=True, type=click.Choice(['snake_case', 'camelCase', 'PascalCase', 'kebab-case', 'SCREAMING_SNAKE', 'lowercase']), help='Naming conventions to exclude from generation')
 def generate(
     project_path: str,
     config: Optional[str],
@@ -120,9 +168,21 @@ def generate(
     dry_run: bool,
     typescript_only: bool,
     sphinx_only: bool,
+    docusaurus_only: bool,
+    format: str,
+    extend_existing: bool,
+    force_create_new: bool,
     ai_provider: Optional[str],
     ai_model: Optional[str],
     no_ai: bool,
+    language: str,
+    interface_naming: str,
+    property_naming: str,
+    preserve_django_names: bool,
+    single_language_only: bool,
+    exclude_languages: List[str],
+    single_naming_only: bool,
+    exclude_naming: List[str],
 ) -> None:
     """Generate API documentation for a Django project"""
     try:
@@ -137,9 +197,20 @@ def generate(
             exclude_apps=exclude_apps,
             verbose=verbose,
             dry_run=dry_run,
+            format=format,
+            extend_existing=extend_existing,
+            force_create_new=force_create_new,
             ai_provider=ai_provider,
             ai_model=ai_model,
             no_ai=no_ai,
+            language=language,
+            interface_naming=interface_naming,
+            property_naming=property_naming,
+            preserve_django_names=preserve_django_names,
+            single_language_only=single_language_only,
+            exclude_languages=exclude_languages,
+            single_naming_only=single_naming_only,
+            exclude_naming=exclude_naming,
         )
         
         # Validate project
@@ -159,8 +230,12 @@ def generate(
         elif sphinx_only:
             console.print("📚 Generating Sphinx documentation only...")
             result = generator.generate_sphinx_docs()
+        elif docusaurus_only:
+            console.print("📚 Generating Docusaurus documentation only...")
+            result = generator.generate_docusaurus_docs()
         else:
-            console.print("📖 Generating complete API documentation...")
+            doc_format = django_config.generation.documentation_format
+            console.print(f"📖 Generating complete API documentation ({doc_format})...")
             result = generator.generate_all()
         
         # Display results
@@ -313,9 +388,20 @@ def _create_config(
     exclude_apps: List[str] = None,
     verbose: bool = False,
     dry_run: bool = False,
+    format: str = "sphinx",
+    extend_existing: bool = True,
+    force_create_new: bool = False,
     ai_provider: Optional[str] = None,
     ai_model: Optional[str] = None,
     no_ai: bool = False,
+    language: str = "typescript",
+    interface_naming: str = "PascalCase",
+    property_naming: str = "camelCase",
+    preserve_django_names: bool = False,
+    single_language_only: bool = False,
+    exclude_languages: List[str] = None,
+    single_naming_only: bool = False,
+    exclude_naming: List[str] = None,
 ) -> DjangoDocsConfig:
     """Create configuration from CLI options"""
     
@@ -346,6 +432,13 @@ def _create_config(
     if dry_run:
         config.dry_run = True
     
+    # Set documentation format
+    config.generation.documentation_format = format
+    
+    # Set extension behavior
+    config.generation.extend_existing_docs = extend_existing
+    config.generation.force_create_new = force_create_new
+    
     if ai_provider:
         config.ai.provider = ai_provider
     
@@ -354,6 +447,34 @@ def _create_config(
     
     if no_ai:
         config.ai.provider = 'local'  # Disable external AI
+    
+    # Set language template options with comprehensive defaults
+    config.generation.language_template = language
+    config.generation.interface_naming_convention = interface_naming
+    config.generation.property_naming_convention = property_naming
+    config.generation.preserve_django_field_names = preserve_django_names
+    
+    # Multi-language generation (default enabled, but can be disabled)
+    config.generation.generate_multiple_languages = not single_language_only
+    
+    # Build additional languages list (default: python, java, but can exclude some)
+    all_languages = ["python", "java", "csharp", "go", "rust", "swift", "kotlin"]
+    if single_language_only:
+        config.generation.additional_languages = []
+    else:
+        excluded = set(exclude_languages) if exclude_languages else set()
+        config.generation.additional_languages = [lang for lang in all_languages if lang not in excluded]
+    
+    # Multi-naming generation (default enabled, but can be disabled)  
+    config.generation.generate_all_naming_variants = not single_naming_only
+    
+    # Build naming variants list (default: camelCase, snake_case, PascalCase, but can exclude some)
+    all_naming = ["camelCase", "snake_case", "PascalCase", "kebab-case", "SCREAMING_SNAKE", "lowercase"]
+    if single_naming_only:
+        config.generation.naming_variants = [interface_naming, property_naming]
+    else:
+        excluded_naming = set(exclude_naming) if exclude_naming else set()
+        config.generation.naming_variants = [naming for naming in all_naming if naming not in excluded_naming]
     
     return config
 

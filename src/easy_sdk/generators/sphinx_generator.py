@@ -16,12 +16,15 @@ logger = logging.getLogger(__name__)
 class SphinxDocumentationGenerator:
     """
     Generates Sphinx-compatible reStructuredText documentation
-    from Django analysis results
+    from Django analysis results. Can either create new documentation
+    or extend existing Sphinx setups.
     """
     
     def __init__(self, config: DjangoDocsConfig):
         self.config = config
         self.output_dir = config.output.sphinx_output_dir
+        self.is_existing_sphinx = self._detect_existing_sphinx()
+        self.easy_sdk_section = "easy_sdk"
         
         # Initialize Jinja2 environment for templates
         template_dir = Path(__file__).parent.parent / "templates" / "sphinx"
@@ -52,22 +55,32 @@ class SphinxDocumentationGenerator:
             # Create output directory structure
             self._create_directory_structure()
             
-            # Generate main index file
-            index_file = self._generate_index(analysis_result)
-            generated_files.append(index_file)
-            
-            # Generate configuration file
-            conf_file = self._generate_conf_py()
-            generated_files.append(conf_file)
+            if self.is_existing_sphinx:
+                logger.info(f"⚙️ Extending existing Sphinx configuration")
+                # Generate our section index
+                easy_sdk_index = self._generate_easy_sdk_index(analysis_result)
+                generated_files.append(easy_sdk_index)
+                
+                # Extend existing main index
+                self._extend_main_index()
+            else:
+                logger.info(f"⚙️ Creating new Sphinx project")
+                # Generate main index file
+                index_file = self._generate_index(analysis_result)
+                generated_files.append(index_file)
+                
+                # Generate configuration file
+                conf_file = self._generate_conf_py()
+                generated_files.append(conf_file)
+                
+                # Generate static assets
+                static_files = self._generate_static_assets()
+                generated_files.extend(static_files)
             
             # Generate app documentation from analysis results
             if analysis_result:
                 app_files = self._generate_app_documentation(analysis_result)
                 generated_files.extend(app_files)
-            
-            # Generate static assets
-            static_files = self._generate_static_assets()
-            generated_files.extend(static_files)
             
             logger.info(f"Generated {len(generated_files)} Sphinx documentation files")
             
@@ -75,6 +88,39 @@ class SphinxDocumentationGenerator:
             logger.error(f"Failed to generate Sphinx documentation: {str(e)}")
         
         return generated_files
+    
+    def _detect_existing_sphinx(self) -> bool:
+        """
+        Detect if there's already a Sphinx setup in the target directory
+        
+        Returns:
+            True if existing Sphinx project is found
+        """
+        # Check configuration first
+        if self.config.generation.force_create_new:
+            logger.info(f"🔄 force_create_new=True, creating new documentation structure")
+            return False
+            
+        if not self.config.generation.extend_existing_docs:
+            logger.info(f"🚫 extend_existing_docs=False, creating new documentation structure")
+            return False
+        
+        # Check for key Sphinx files
+        key_files = [
+            self.output_dir / "conf.py",
+            self.output_dir / "index.rst",
+            self.output_dir / "Makefile"
+        ]
+        
+        existing_files = [f for f in key_files if f.exists()]
+        
+        if existing_files:
+            logger.info(f"🔍 Detected existing Sphinx setup at {self.output_dir}")
+            logger.info(f"📁 Found {len(existing_files)} existing files: {[f.name for f in existing_files]}")
+            return True
+        
+        logger.info(f"🆕 No existing Sphinx setup found, will create new one")
+        return False
     
     def generate_app_documentation(self, app_name: str, app_analysis: Dict[str, Any]) -> List[Path]:
         """
@@ -90,7 +136,9 @@ class SphinxDocumentationGenerator:
         generated_files = []
         
         try:
-            app_dir = self.output_dir / "apps" / app_name
+            # Use correct directory structure based on setup type
+            base_path = self.easy_sdk_section if self.is_existing_sphinx else ""
+            app_dir = self.output_dir / base_path / "apps" / app_name
             app_dir.mkdir(parents=True, exist_ok=True)
             
             # Generate app index
@@ -602,9 +650,61 @@ Fields
 Example Usage
 ^^^^^^^^^^^^^
 
+Request Example:
+
 .. code-block:: json
+   :caption: POST Request Body
 
    {{ serializer.ai_insights.examples.request_example or '{}' }}
+
+Response Example:
+
+.. code-block:: json
+   :caption: 200 OK Response
+
+   {{ serializer.ai_insights.examples.response_example or '{}' }}
+
+{% else %}
+Example Usage
+^^^^^^^^^^^^^
+
+Python Usage:
+
+.. code-block:: python
+   :caption: Creating {{ serializer.name.replace("Serializer", "") }} instance
+
+   from {{ app_name }}.serializers import {{ serializer.name }}
+   
+   # Create serializer instance
+   serializer = {{ serializer.name }}(data=request.data)
+   if serializer.is_valid():
+       instance = serializer.save()
+   else:
+       print(serializer.errors)
+
+JavaScript/TypeScript Usage:
+
+.. code-block:: javascript
+   :caption: Frontend API Call
+
+   // Fetch {{ serializer.name.replace("Serializer", "").lower() }} data
+   const response = await fetch('/api/{{ app_name }}/{{ serializer.name.replace("Serializer", "").lower() }}/', {
+     method: 'GET',
+     headers: {
+       'Content-Type': 'application/json',
+       'Authorization': `Bearer ${token}`
+     }
+   });
+   const data = await response.json();
+
+cURL Example:
+
+.. code-block:: bash
+   :caption: Command Line API Call
+
+   curl -X GET "http://localhost:8000/api/{{ app_name }}/{{ serializer.name.replace("Serializer", "").lower() }}/" \
+     -H "Accept: application/json" \
+     -H "Authorization: Bearer YOUR_TOKEN"
 
 {% endif %}
 
@@ -664,18 +764,77 @@ Responses
 {% endfor %}
 {% endif %}
 
-{% if endpoint.ai_examples and endpoint.ai_examples.request %}
-Example Request
-^^^^^^^^^^^^^^^
+Examples
+^^^^^^^^
+
+HTTP Request:
 
 .. code-block:: http
+   :caption: {{ endpoint.method }} {{ endpoint.path }}
 
    {{ endpoint.method }} {{ endpoint.path }} HTTP/1.1
+   Host: localhost:8000
    Content-Type: application/json
+   Authorization: Bearer YOUR_TOKEN
    
-   {{ endpoint.ai_examples.request or '' }}
+   {% if endpoint.method in ['POST', 'PUT', 'PATCH'] %}{{ endpoint.ai_examples.request or '{}' }}{% endif %}
 
-{% endif %}
+Python Requests:
+
+.. code-block:: python
+   :caption: Using Python requests library
+
+   import requests
+   
+   url = "http://localhost:8000{{ endpoint.path }}"
+   headers = {
+       "Content-Type": "application/json",
+       "Authorization": "Bearer YOUR_TOKEN"
+   }
+   
+   {% if endpoint.method == 'GET' %}response = requests.get(url, headers=headers)
+   {% elif endpoint.method == 'POST' %}data = {{ endpoint.ai_examples.request or '{}' }}
+   response = requests.post(url, json=data, headers=headers)
+   {% elif endpoint.method == 'PUT' %}data = {{ endpoint.ai_examples.request or '{}' }}
+   response = requests.put(url, json=data, headers=headers)
+   {% elif endpoint.method == 'PATCH' %}data = {{ endpoint.ai_examples.request or '{}' }}
+   response = requests.patch(url, json=data, headers=headers)
+   {% elif endpoint.method == 'DELETE' %}response = requests.delete(url, headers=headers)
+   {% endif %}
+   
+   if response.status_code == 200:
+       result = response.json()
+       print(result)
+
+JavaScript/Fetch:
+
+.. code-block:: javascript
+   :caption: Using Fetch API
+
+   const url = 'http://localhost:8000{{ endpoint.path }}';
+   const options = {
+     method: '{{ endpoint.method }}',
+     headers: {
+       'Content-Type': 'application/json',
+       'Authorization': 'Bearer YOUR_TOKEN'
+     }{% if endpoint.method in ['POST', 'PUT', 'PATCH'] %},
+     body: JSON.stringify({{ endpoint.ai_examples.request or '{}' }}){% endif %}
+   };
+   
+   fetch(url, options)
+     .then(response => response.json())
+     .then(data => console.log(data))
+     .catch(error => console.error('Error:', error));
+
+cURL Command:
+
+.. code-block:: bash
+   :caption: Command line with cURL
+
+   curl -X {{ endpoint.method }} "http://localhost:8000{{ endpoint.path }}" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer YOUR_TOKEN"{% if endpoint.method in ['POST', 'PUT', 'PATCH'] %} \
+     -d '{{ endpoint.ai_examples.request or '{}' }}'{% endif %}
 
 ---
 
@@ -725,3 +884,193 @@ Fields
             return template_map.get(name, Template(""))
             
         self.jinja_env.get_template = get_template
+    
+    def _extend_main_index(self) -> None:
+        """Extend existing index.rst with easy-sdk section"""
+        index_file = self.output_dir / "index.rst"
+        
+        if not index_file.exists():
+            logger.warning("No existing index.rst found to extend")
+            return
+            
+        try:
+            # Read existing index
+            with open(index_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Check if easy-sdk section already exists
+            if self.easy_sdk_section in content:
+                logger.info(f"♻️ easy-sdk section already exists in index.rst, skipping extension")
+                return
+            
+            # Add our section to the toctree
+            easy_sdk_entry = f"""   {self.easy_sdk_section}/index"""
+            
+            # Find toctree and add our section
+            import re
+            toctree_pattern = r'(\.\.[\s]+toctree::[^\n]*\n(?:[\s]+:[^\n]*\n)*)(.*?)(\n\n|\nIndices|\Z)'
+            match = re.search(toctree_pattern, content, re.DOTALL)
+            
+            if match:
+                toctree_header = match.group(1)
+                existing_entries = match.group(2)
+                after_toctree = match.group(3)
+                
+                # Add our entry at the beginning of toctree
+                updated_content = content.replace(
+                    toctree_header + existing_entries + after_toctree,
+                    toctree_header + "\\n" + easy_sdk_entry + "\\n" + existing_entries + after_toctree
+                )
+                
+                with open(index_file, 'w', encoding='utf-8') as f:
+                    f.write(updated_content)
+                    
+                logger.info(f"✅ Extended existing index.rst with easy-sdk section")
+            else:
+                logger.warning("Could not find toctree in existing index.rst")
+                
+        except Exception as e:
+            logger.error(f"Failed to extend main index: {e}")
+    
+    def _generate_easy_sdk_index(self, analysis_result: Optional[Dict[str, Any]] = None) -> Path:
+        """Generate index file for easy-sdk section in existing Sphinx"""
+        apps = []
+        if analysis_result:
+            apps = [app_name for app_name, app_data in analysis_result.items() 
+                   if isinstance(app_data, dict) and (
+                       app_data.get('serializers') or app_data.get('views')
+                   )]
+        
+        content = f"""🤖 Easy SDK Generated Documentation
+=====================================
+
+This section contains automatically generated API documentation for **{self.config.project_name}**.
+
+.. note::
+   This documentation is automatically generated by `easy-sdk <https://github.com/your-org/easy-sdk>`_.
+   To update, re-run the easy-sdk generator on your Django project.
+
+Project Information
+-------------------
+
+- **Project:** {self.config.project_name}
+- **Version:** {self.config.version}
+- **Description:** {self.config.description}
+- **Generated:** {self._get_current_timestamp()}
+
+API Reference
+-------------
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Django Apps:
+
+"""
+        
+        for app in apps:
+            content += f"   apps/{app}/index\\n"
+        
+        content += f"""
+
+Getting Started
+---------------
+
+Authentication
+^^^^^^^^^^^^^^
+
+Most API endpoints require authentication. Include your API token in the Authorization header:
+
+.. code-block:: http
+
+   Authorization: Bearer YOUR_API_TOKEN
+
+Response Format
+^^^^^^^^^^^^^^^
+
+All API responses follow a consistent JSON format:
+
+.. code-block:: json
+
+   {{
+     "data": {{}},
+     "message": "Success message", 
+     "success": true
+   }}
+
+Error Handling
+^^^^^^^^^^^^^^
+
+Error responses include detailed information:
+
+.. code-block:: json
+
+   {{
+     "error": {{
+       "detail": "Error description",
+       "code": "ERROR_CODE"
+     }},
+     "success": false
+   }}
+
+SDKs and Libraries
+------------------
+
+JavaScript/TypeScript
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   npm install axios
+
+.. code-block:: javascript
+
+   import axios from 'axios';
+   
+   const api = axios.create({{
+     baseURL: 'http://localhost:8000/api',
+     headers: {{
+       'Authorization': 'Bearer YOUR_TOKEN',
+       'Content-Type': 'application/json'
+     }}
+   }});
+
+Python
+^^^^^^
+
+.. code-block:: bash
+
+   pip install requests
+
+.. code-block:: python
+
+   import requests
+   
+   BASE_URL = 'http://localhost:8000/api'
+   headers = {{
+       'Authorization': 'Bearer YOUR_TOKEN',
+       'Content-Type': 'application/json'
+   }}
+
+Regenerating Documentation
+--------------------------
+
+To update this documentation with the latest changes:
+
+.. code-block:: bash
+
+   easy-sdk /path/to/django/project --format sphinx
+
+The generator will detect this existing Sphinx setup and only update the easy-sdk sections.
+"""
+        
+        easy_sdk_index = self.output_dir / self.easy_sdk_section / "index.rst"
+        easy_sdk_index.parent.mkdir(parents=True, exist_ok=True)
+        with open(easy_sdk_index, 'w', encoding='utf-8') as f:
+            f.write(content)
+            
+        return easy_sdk_index
+    
+    def _get_current_timestamp(self) -> str:
+        """Get current timestamp for documentation"""
+        from datetime import datetime
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")

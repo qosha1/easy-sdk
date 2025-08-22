@@ -16,7 +16,8 @@ from ..analyzers.serializer_analyzer import SerializerAnalyzer
 from ..analyzers.view_analyzer import ViewAnalyzer
 from ..ai.engine import AIAnalysisEngine
 from ..generators.sphinx_generator import SphinxDocumentationGenerator
-from ..generators.typescript_generator import TypeScriptGenerator
+from ..generators.docusaurus_generator import DocusaurusGenerator
+from ..generators.enhanced_typescript_generator import EnhancedTypeScriptGenerator
 from .config import DjangoDocsConfig
 
 logger = logging.getLogger(__name__)
@@ -140,7 +141,27 @@ class DjangoDocsGenerator:
         self.view_analyzer = ViewAnalyzer(self.config)
         self.ai_engine = AIAnalysisEngine(self.config)
         self.sphinx_generator = SphinxDocumentationGenerator(self.config)
-        self.typescript_generator = TypeScriptGenerator(self.config)
+        self.docusaurus_generator = DocusaurusGenerator(self.config)
+        # Choose generator based on configuration
+        if (self.config.generation.generate_multiple_languages and 
+            len(self.config.generation.additional_languages) > 0) or \
+           (self.config.generation.generate_all_naming_variants and 
+            len(self.config.generation.naming_variants) > 1):
+            # Use multi-language generator for comprehensive generation
+            from ..generators.multi_language_generator import MultiLanguageGenerator
+            self.typescript_generator = MultiLanguageGenerator(self.config)
+        else:
+            # Use enhanced TypeScript generator for single language/variant
+            from ..generators.enhanced_typescript_generator import TypeScriptGeneratorConfig
+            from ..utils.naming_conventions import LanguageTemplate, NamingConvention
+            
+            ts_config = TypeScriptGeneratorConfig(
+                language=LanguageTemplate(self.config.generation.language_template),
+                interface_naming=NamingConvention(self.config.generation.interface_naming_convention),
+                property_naming=NamingConvention(self.config.generation.property_naming_convention),
+                preserve_django_names=self.config.generation.preserve_django_field_names,
+            )
+            self.typescript_generator = EnhancedTypeScriptGenerator(self.config, ts_config)
     
     def _setup_logging(self) -> None:
         """Setup logging configuration"""
@@ -191,18 +212,26 @@ class DjangoDocsGenerator:
                 
                 # Step 3: AI-powered analysis (20%)
                 progress.update(main_task, description="🧠 Running AI analysis...")
-                ai_result = self._run_ai_analysis(analysis_result)
+                ai_result = self._run_ai_analysis(analysis_result, progress, main_task)
                 progress.update(main_task, advance=20)
                 
-                # Step 4: Generate Sphinx documentation (15%)
-                progress.update(main_task, description="📚 Generating Sphinx documentation...")
-                sphinx_result = self.generate_sphinx_docs(analysis_result)
-                if not sphinx_result.success:
-                    for error in sphinx_result.errors:
-                        result.add_error(f"Sphinx generation error: {error}")
+                # Step 4: Generate documentation (15%)
+                doc_format = self.config.generation.documentation_format
+                if doc_format == "docusaurus":
+                    progress.update(main_task, description="📚 Generating Docusaurus documentation...")
+                    doc_result = self.generate_docusaurus_docs(analysis_result)
+                    doc_type = "Docusaurus"
+                else:
+                    progress.update(main_task, description="📚 Generating Sphinx documentation...")
+                    doc_result = self.generate_sphinx_docs(analysis_result)
+                    doc_type = "Sphinx"
                 
-                result.generated_files.extend(sphinx_result.generated_files)
-                self.generated_files.extend(sphinx_result.generated_files)
+                if not doc_result.success:
+                    for error in doc_result.errors:
+                        result.add_error(f"{doc_type} generation error: {error}")
+                
+                result.generated_files.extend(doc_result.generated_files)
+                self.generated_files.extend(doc_result.generated_files)
                 progress.update(main_task, advance=15)
                 
                 # Step 5: Generate TypeScript interfaces (15%)
@@ -254,6 +283,32 @@ class DjangoDocsGenerator:
         
         return result
     
+    def generate_docusaurus_docs(self, analysis_result: Optional[Dict] = None) -> GenerationResult:
+        """
+        Generate only Docusaurus documentation
+        
+        Args:
+            analysis_result: Analysis results from Django components
+        
+        Returns:
+            GenerationResult for Docusaurus generation
+        """
+        result = GenerationResult()
+        
+        try:
+            # Ensure output directories exist
+            self.config.create_output_directories()
+            
+            # Generate Docusaurus documentation
+            docusaurus_files = self.docusaurus_generator.generate_documentation(analysis_result)
+            result.generated_files.extend(docusaurus_files)
+            
+        except Exception as e:
+            result.add_error(f"Docusaurus generation failed: {str(e)}")
+            logger.exception("Failed to generate Docusaurus documentation")
+        
+        return result
+    
     def generate_typescript_types(self) -> GenerationResult:
         """
         Generate only TypeScript type definitions
@@ -267,8 +322,27 @@ class DjangoDocsGenerator:
             # Ensure output directories exist
             self.config.create_output_directories()
             
+            # First run analysis if not already done
+            if not hasattr(self, 'scan_result') or not self.scan_result:
+                logger.info("Running Django project analysis for TypeScript generation...")
+                scan_result = self.scanner.scan_project(self.project_path)
+                self.scanner.scan_result = scan_result
+                
+                if not scan_result.success:
+                    for error in scan_result.errors:
+                        result.add_error(f"Analysis error: {error}")
+                    return result
+                
+                # Analyze Django components
+                analysis_result = self._analyze_django_components(scan_result.discovered_apps)
+                if analysis_result is None:
+                    result.add_error("Failed to analyze Django components")
+                    return result
+                
+                self.scan_result = analysis_result
+            
             # Generate TypeScript types
-            typescript_files = self.typescript_generator.generate_types()
+            typescript_files = self.typescript_generator.generate_types_from_analysis(self.scan_result)
             result.generated_files.extend(typescript_files)
             
         except Exception as e:
@@ -306,11 +380,15 @@ class DjangoDocsGenerator:
             logger.exception(f"Failed to analyze Django components: {str(e)}")
             return None
     
-    def _run_ai_analysis(self, analysis_result: Dict) -> Dict:
+    def _run_ai_analysis(self, analysis_result: Dict, progress=None, main_task=None) -> Dict:
         """Run AI analysis on the Django components"""
         try:
             # AI analysis will enhance the basic structural analysis
-            enhanced_analysis = self.ai_engine.enhance_analysis(analysis_result)
+            # Pass progress information to AI engine for granular updates
+            if progress and main_task:
+                enhanced_analysis = self.ai_engine.enhance_analysis(analysis_result, progress, main_task)
+            else:
+                enhanced_analysis = self.ai_engine.enhance_analysis(analysis_result)
             return enhanced_analysis
             
         except Exception as e:

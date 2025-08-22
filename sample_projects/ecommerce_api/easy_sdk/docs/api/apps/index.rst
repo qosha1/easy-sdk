@@ -8,3 +8,6 @@ Documentation for Django apps discovered in the project.
    :caption: Apps:
 
    products/index
+   users/index
+   orders/index
+   reviews/index

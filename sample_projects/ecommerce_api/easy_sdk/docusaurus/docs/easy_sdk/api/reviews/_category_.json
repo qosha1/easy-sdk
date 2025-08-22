@@ -1,0 +1,8 @@
+{
+  "label": "Reviews API",
+  "position": 4,
+  "link": {
+    "type": "doc", 
+    "id": "easy_sdk/api/reviews/index"
+  }
+}

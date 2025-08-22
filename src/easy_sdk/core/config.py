@@ -39,11 +39,44 @@ class AIConfig(BaseModel):
 class GenerationConfig(BaseModel):
     """Configuration for documentation generation"""
     
+    # Documentation format options
+    documentation_format: str = Field(default="sphinx", description="Documentation format: sphinx or docusaurus")
+    
+    # Extension behavior
+    extend_existing_docs: bool = Field(default=True, description="Extend existing documentation setups instead of overwriting")
+    force_create_new: bool = Field(default=False, description="Force creation of new documentation structure (overrides extend_existing_docs)")
+    
     include_examples: bool = Field(default=True, description="Include request/response examples")
     generate_postman_collection: bool = Field(default=True, description="Generate Postman collection")
     include_internal_endpoints: bool = Field(default=False, description="Include internal/admin endpoints")
     typescript_strict_mode: bool = Field(default=True, description="Generate strict TypeScript types")
     max_depth: int = Field(default=10, description="Maximum nesting depth for serializers")
+    
+    # Language template configuration - Generate everything by default
+    language_template: str = Field(default="typescript", description="Primary language template: typescript, python, java, csharp, go, rust, swift, kotlin")
+    interface_naming_convention: str = Field(default="PascalCase", description="Interface naming: snake_case, camelCase, PascalCase, kebab-case, SCREAMING_SNAKE, lowercase")
+    property_naming_convention: str = Field(default="camelCase", description="Property naming: snake_case, camelCase, PascalCase, kebab-case, SCREAMING_SNAKE, lowercase")
+    preserve_django_field_names: bool = Field(default=False, description="Keep original Django field names without transformation")
+    generate_multiple_languages: bool = Field(default=True, description="Generate types for multiple languages")
+    additional_languages: List[str] = Field(default_factory=lambda: ["python", "java"], description="Additional languages to generate: python, java, csharp, go, rust, swift, kotlin")
+    generate_all_naming_variants: bool = Field(default=True, description="Generate multiple naming convention variants")
+    naming_variants: List[str] = Field(default_factory=lambda: ["camelCase", "snake_case", "PascalCase"], description="Naming convention variants to generate")
+    
+    @field_validator('language_template')
+    @classmethod
+    def validate_language_template(cls, v):
+        valid_languages = ['typescript', 'javascript', 'python', 'java', 'csharp', 'go', 'rust', 'swift', 'kotlin']
+        if v not in valid_languages:
+            raise ValueError(f"Language template must be one of: {valid_languages}")
+        return v
+    
+    @field_validator('interface_naming_convention', 'property_naming_convention')
+    @classmethod
+    def validate_naming_convention(cls, v):
+        valid_conventions = ['snake_case', 'camelCase', 'PascalCase', 'kebab-case', 'SCREAMING_SNAKE', 'lowercase']
+        if v not in valid_conventions:
+            raise ValueError(f"Naming convention must be one of: {valid_conventions}")
+        return v
     
     # Sphinx-specific options
     sphinx_theme_options: Dict[str, Any] = Field(
@@ -60,6 +93,7 @@ class OutputConfig(BaseModel):
     
     base_output_dir: Path = Field(default=Path("./docs"), description="Base output directory")
     sphinx_output_dir: Path = Field(default=Path("./docs/api"), description="Sphinx documentation output")
+    docusaurus_output_dir: Path = Field(default=Path("./docusaurus"), description="Docusaurus documentation output")
     typescript_output_dir: Path = Field(default=Path("./types"), description="TypeScript types output")
     static_output_dir: Path = Field(default=Path("./docs/_static"), description="Static assets output")
     
@@ -121,6 +155,7 @@ class DjangoDocsConfig(BaseModel):
         if not hasattr(self.output, '_paths_set'):
             self.output.base_output_dir = easy_sdk_dir / "docs"
             self.output.sphinx_output_dir = easy_sdk_dir / "docs" / "api"
+            self.output.docusaurus_output_dir = easy_sdk_dir / "docusaurus"
             self.output.typescript_output_dir = easy_sdk_dir / "types"
             self.output.static_output_dir = easy_sdk_dir / "docs" / "_static"
             self.output._paths_set = True
