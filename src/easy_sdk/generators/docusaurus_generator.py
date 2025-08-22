@@ -4,6 +4,7 @@ Docusaurus documentation generator for Django API documentation
 
 import json
 import logging
+import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -20,9 +21,49 @@ class DocusaurusGenerator:
     
     def __init__(self, config: DjangoDocsConfig):
         self.config = config
-        self.output_dir = config.output.docusaurus_output_dir if hasattr(config.output, 'docusaurus_output_dir') else config.output.base_output_dir / "docusaurus"
+        
+        # Determine output directory based on whether we're extending existing setup
+        if hasattr(config.output, 'docusaurus_output_dir'):
+            self.output_dir = config.output.docusaurus_output_dir
+        else:
+            # First check if base_output_dir is already a Docusaurus project
+            potential_docusaurus = config.output.base_output_dir
+            if self._is_docusaurus_project(potential_docusaurus):
+                self.output_dir = potential_docusaurus
+            else:
+                self.output_dir = config.output.base_output_dir / "docusaurus"
+        
         self.is_existing_docusaurus = self._detect_existing_docusaurus()
         self.easy_sdk_section = "easy_sdk"
+    
+    def _convert_serializer_info_to_dict(self, serializer_info) -> Dict[str, Any]:
+        """Convert SerializerInfo object to dictionary format"""
+        try:
+            serializer_dict = {
+                'name': getattr(serializer_info, 'name', ''),
+                'file_path': getattr(serializer_info, 'file_path', ''),
+                'fields': getattr(serializer_info, 'fields', {}),
+                'docstring': getattr(serializer_info, 'docstring', ''),
+                'inheritance': getattr(serializer_info, 'inheritance', []),
+            }
+            return serializer_dict
+        except Exception as e:
+            logger.debug(f"Failed to convert SerializerInfo to dict: {e}")
+            return {'name': 'unknown', 'fields': {}}
+
+    def _convert_view_info_to_dict(self, view_info) -> Dict[str, Any]:
+        """Convert ViewInfo object to dictionary format"""
+        try:
+            view_dict = {
+                'name': getattr(view_info, 'name', ''),
+                'file_path': getattr(view_info, 'file_path', ''),
+                'endpoints': getattr(view_info, 'endpoints', []),
+                'docstring': getattr(view_info, 'docstring', ''),
+            }
+            return view_dict
+        except Exception as e:
+            logger.debug(f"Failed to convert ViewInfo to dict: {e}")
+            return {'name': 'unknown', 'endpoints': []}
         
     def generate_documentation(self, analysis_result: Optional[Dict[str, Any]] = None) -> List[Path]:
         """
@@ -59,6 +100,14 @@ class DocusaurusGenerator:
             logger.error(f"Failed to generate Docusaurus documentation: {str(e)}")
         
         return generated_files
+    
+    def _is_docusaurus_project(self, path: Path) -> bool:
+        """Check if a directory is a Docusaurus project"""
+        key_files = [
+            path / "docusaurus.config.js",
+            path / "package.json"
+        ]
+        return any(f.exists() for f in key_files)
     
     def _detect_existing_docusaurus(self) -> bool:
         """
@@ -100,6 +149,7 @@ class DocusaurusGenerator:
             directories = [
                 self.output_dir / "docs" / self.easy_sdk_section,
                 self.output_dir / "docs" / self.easy_sdk_section / "api",
+                self.output_dir / "src" / "components",  # Ensure components directory exists
             ]
             logger.info(f"📁 Creating easy-sdk directories in existing Docusaurus setup")
         else:
@@ -118,6 +168,9 @@ class DocusaurusGenerator:
         
         for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)
+        
+        # Copy React components to target project
+        self._copy_react_components()
     
     def _generate_config_files(self) -> List[Path]:
         """Generate Docusaurus configuration files"""
@@ -338,56 +391,9 @@ This documentation was automatically generated from Django code analysis using [
     
     def _generate_app_overview(self, app_name: str, app_data: Dict[str, Any]) -> Path:
         """Generate app overview page"""
-        serializer_count = len(app_data.get('serializers', []))
-        view_count = len(app_data.get('views', []))
-        
-        content = f"""---
-sidebar_position: 1
----
+        # Generate Swagger-style API documentation instead of old format
+        content = self._generate_swagger_app_documentation(app_name, app_data)
 
-# {app_name.title()} App
-
-Overview of the {app_name} Django app and its API components.
-
-## Summary
-
-- **Serializers:** {serializer_count}
-- **Views:** {view_count}
-
-## Quick Navigation
-
-- [📋 Serializers](./serializers) - Data serialization and validation
-- [🔗 Endpoints](./endpoints) - API endpoints and usage examples
-
-## Architecture
-
-The {app_name} app provides the following functionality:
-
-```mermaid
-graph TD
-    A[Client Request] --> B[Django View]
-    B --> C[Serializer Validation]
-    C --> D[Model Operations]
-    D --> E[Serializer Response]
-    E --> F[JSON Response]
-```
-
-## Data Models
-
-The app works with the following data structures:
-
-{self._generate_model_overview(app_data)}
-
-## Authentication & Permissions
-
-Most endpoints in this app require authentication. Make sure to include your API token:
-
-```bash
-curl -H "Authorization: Bearer YOUR_TOKEN" \\
-     -H "Content-Type: application/json" \\
-     http://localhost:8000/api/{app_name}/
-```
-"""
         
         base_path = self.easy_sdk_section if self.is_existing_docusaurus else ""
         overview_file = self.output_dir / "docs" / base_path / "api" / app_name / "index.md"
@@ -409,15 +415,21 @@ Data serialization and validation classes for the {app_name} app.
 """
         
         for serializer in serializers:
-            serializer_name = serializer.get('name', 'Unknown')
-            fields = serializer.get('fields', {})
+            # Convert SerializerInfo object to dict if needed
+            if hasattr(serializer, 'name') and not hasattr(serializer, 'get'):
+                serializer_dict = self._convert_serializer_info_to_dict(serializer)
+            else:
+                serializer_dict = serializer
+                
+            serializer_name = serializer_dict.get('name', 'Unknown')
+            fields = serializer_dict.get('fields', {})
             
             content += f"""
 ## {serializer_name}
 
-{serializer.get('docstring', f'{serializer_name} for handling {app_name} data.')}
+{serializer_dict.get('docstring', f'{serializer_name} for handling {app_name} data.')}
 
-**File:** `{serializer.get('file_path', '')}`
+**File:** `{serializer_dict.get('file_path', '')}`
 
 ### Fields
 
@@ -500,15 +512,21 @@ API endpoints and usage examples for the {app_name} app.
 """
         
         for view in views:
-            view_name = view.get('name', 'Unknown')
-            endpoints = view.get('endpoints', [])
+            # Convert ViewInfo object to dict if needed
+            if hasattr(view, 'name') and not hasattr(view, 'get'):
+                view_dict = self._convert_view_info_to_dict(view)
+            else:
+                view_dict = view
+                
+            view_name = view_dict.get('name', 'Unknown')
+            endpoints = view_dict.get('endpoints', [])
             
             content += f"""
 ## {view_name}
 
-{view.get('docstring', f'{view_name} API endpoints.')}
+{view_dict.get('docstring', f'{view_name} API endpoints.')}
 
-**File:** `{view.get('file_path', '')}`
+**File:** `{view_dict.get('file_path', '')}`
 
 """
             
@@ -1038,8 +1056,7 @@ Easy-SDK generates **all variants automatically** so every team can use their pr
                 after = match.group(3)
                 
                 # Add our section at the beginning
-                newline = "\\n"
-                updated_content = before + newline + easy_sdk_section + newline + existing_items + after
+                updated_content = before + '\n' + easy_sdk_section + '\n' + existing_items + after
                 
                 with open(sidebar_file, 'w', encoding='utf-8') as f:
                     f.write(updated_content)
@@ -1073,16 +1090,14 @@ This documentation includes:
 - **Version:** {self.config.version} 
 - **Generated:** {self._get_current_timestamp()}
 
-## 🌐 Multi-Language Type Generation
+## 🌐 Interactive API Documentation
 
-import MultiLanguageTypeViewer from '@site/src/components/MultiLanguageTypeViewer';
+Easy-SDK provides interactive Swagger-style API documentation with:
 
-<MultiLanguageTypeViewer 
-  appName="products"
-  title="🚀 Complete Multi-Language API Types"
-/>
-
-Easy-SDK automatically generates API type definitions in **8 programming languages** with **36 naming convention variants**. Choose the language and style that matches your project's needs!
+- **Interactive Testing**: Test API endpoints directly in the browser
+- **Schema Exploration**: Detailed object schemas with expandable properties
+- **Multiple Examples**: Request/response examples for each endpoint
+- **Authentication Support**: Built-in token management
 
 ### 📁 Generated Directory Structure
 
@@ -1128,3 +1143,299 @@ The generator will detect this existing Docusaurus setup and only update the eas
         """Get current timestamp for documentation"""
         from datetime import datetime
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    def _generate_swagger_app_documentation(self, app_name: str, app_data: Dict[str, Any]) -> str:
+        """Generate Swagger-style API documentation for an app"""
+        # Convert serializers and views to the format expected by SwaggerApiDocs
+        serializers = self._convert_serializers_for_swagger(app_data.get('serializers', []))
+        endpoints = self._convert_views_for_swagger(app_data.get('views', []))
+        
+        # Generate app description
+        description = self._generate_app_description(app_name, app_data)
+        
+        # Get sidebar position
+        sidebar_position = self._get_sidebar_position(app_name)
+        
+        # Generate markdown content with SwaggerApiDocs component
+        content = f"""---
+sidebar_position: {sidebar_position}
+---
+
+# {app_name.title()} API
+
+import SwaggerApiDocs from '@site/src/components/SwaggerApiDocs';
+
+<SwaggerApiDocs 
+  appName="{app_name}"
+  title="{app_name.title()} API"
+  description="{description}"
+  serializers={{{self._format_serializers_js(serializers)}}}
+  endpoints={{{self._format_endpoints_js(endpoints)}}}
+/>
+
+## Quick Examples
+
+{self._generate_quick_examples(endpoints, serializers)}
+
+## Data Models
+
+For detailed data model information, see the interactive schema viewer in the API explorer above, which provides comprehensive field definitions, types, and validation rules."""
+        
+        return content
+    
+    def _convert_serializers_for_swagger(self, serializers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Convert Django serializers to SwaggerApiDocs format"""
+        swagger_serializers = []
+        
+        for serializer in serializers:
+            # Convert SerializerInfo object to dict if needed
+            if hasattr(serializer, 'name') and not hasattr(serializer, 'get'):
+                serializer_dict = self._convert_serializer_info_to_dict(serializer)
+            else:
+                serializer_dict = serializer
+            
+            # Convert to Swagger format
+            swagger_serializer = {
+                'name': serializer_dict.get('name', 'UnknownSerializer'),
+                'fields': self._convert_fields_for_swagger(serializer_dict.get('fields', {})),
+                'docstring': serializer_dict.get('docstring', f"{serializer_dict.get('name', 'Unknown')} data structure")
+            }
+            swagger_serializers.append(swagger_serializer)
+        
+        return swagger_serializers
+    
+    def _convert_fields_for_swagger(self, fields: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert Django fields to SwaggerApiDocs format"""
+        swagger_fields = {}
+        
+        for field_name, field_info in fields.items():
+            swagger_fields[field_name] = {
+                'type': field_info.get('type', 'CharField'),
+                'required': field_info.get('required', True),
+                'read_only': field_info.get('read_only', False),
+                'write_only': field_info.get('write_only', False),
+                'allow_null': field_info.get('allow_null', False),
+                'help_text': field_info.get('help_text', f'{field_name} field'),
+                'max_length': field_info.get('max_length'),
+                'choices': field_info.get('choices'),
+                'default': field_info.get('default')
+            }
+        
+        return swagger_fields
+    
+    def _convert_views_for_swagger(self, views: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Convert Django views to SwaggerApiDocs endpoints format"""
+        swagger_endpoints = []
+        
+        for view in views:
+            # Convert ViewInfo object to dict if needed
+            if hasattr(view, 'name') and not hasattr(view, 'get'):
+                view_dict = self._convert_view_info_to_dict(view)
+            else:
+                view_dict = view
+            
+            # Extract endpoints from view
+            endpoints = view_dict.get('endpoints', [])
+            
+            for endpoint in endpoints:
+                swagger_endpoint = {
+                    'method': endpoint.get('method', 'GET'),
+                    'path': endpoint.get('path', '/'),
+                    'description': endpoint.get('description', f"{endpoint.get('method', 'GET')} endpoint"),
+                    'serializer_class': endpoint.get('serializer_class', view_dict.get('serializer_class')),
+                    'tags': endpoint.get('tags', [self._generate_tag_from_path(endpoint.get('path', '/'))]),
+                    'name': endpoint.get('name'),
+                    'permission_classes': view_dict.get('permission_classes'),
+                    'authentication_classes': view_dict.get('authentication_classes')
+                }
+                swagger_endpoints.append(swagger_endpoint)
+        
+        return swagger_endpoints
+    
+    def _generate_tag_from_path(self, path: str) -> str:
+        """Generate tag from API path"""
+        segments = path.split('/')[1:]  # Remove first empty segment
+        
+        # Find the main resource (usually the first non-api segment)
+        for segment in segments:
+            if segment and segment != 'api' and segment != 'v1' and not segment.startswith('{'):
+                return segment.capitalize().replace('-', ' ')
+        
+        return 'API'
+    
+    def _generate_app_description(self, app_name: str, app_data: Dict[str, Any]) -> str:
+        """Generate description for the app"""
+        base_descriptions = {
+            'users': 'The Users API provides endpoints for user management, authentication, profiles, addresses, and wishlists. This includes login/registration, user profiles, shipping/billing addresses, and wishlist functionality.',
+            'products': 'The Products API provides endpoints for managing product catalogs, categories, brands, and product images in the e-commerce system. This includes hierarchical product categorization, brand management, product catalog with pricing and inventory, and image management.',
+            'orders': 'The Orders API provides endpoints for managing shopping carts, orders, and payments in the e-commerce system. This includes cart management for authenticated and anonymous users, order processing and management, payment processing and tracking, and individual order items.',
+            'reviews': 'The Reviews API provides endpoints for managing product reviews, ratings, and customer feedback. This includes review creation, moderation, ratings, and customer feedback management.'
+        }
+        
+        return base_descriptions.get(app_name, f"The {app_name.title()} API provides endpoints for {app_name} management and operations.")
+    
+    def _get_sidebar_position(self, app_name: str) -> int:
+        """Get sidebar position for the app"""
+        positions = {
+            'products': 1,
+            'users': 2,
+            'orders': 3,
+            'reviews': 4
+        }
+        
+        return positions.get(app_name, 5)
+    
+    def _format_serializers_js(self, serializers: List[Dict[str, Any]]) -> str:
+        """Format serializers for JavaScript component"""
+        return json.dumps(serializers, indent=4).replace('\n', '\n  ')
+    
+    def _format_endpoints_js(self, endpoints: List[Dict[str, Any]]) -> str:
+        """Format endpoints for JavaScript component"""
+        return json.dumps(endpoints, indent=4).replace('\n', '\n  ')
+    
+    def _generate_quick_examples(self, endpoints: List[Dict[str, Any]], serializers: List[Dict[str, Any]]) -> str:
+        """Generate quick examples section"""
+        examples = ''
+        
+        # Find a POST endpoint for create example
+        create_endpoint = None
+        for endpoint in endpoints:
+            if (endpoint.get('method', '').upper() == 'POST' and 
+                not '{' in endpoint.get('path', '') and
+                endpoint.get('serializer_class')):
+                create_endpoint = endpoint
+                break
+        
+        if create_endpoint:
+            serializer = None
+            for s in serializers:
+                if s.get('name') == create_endpoint.get('serializer_class'):
+                    serializer = s
+                    break
+            
+            if serializer:
+                example_data = self._generate_example_data_for_serializer(serializer)
+                examples += f"""### {create_endpoint.get('description', 'Create Resource')}
+
+```bash
+{create_endpoint.get('method', 'POST').upper()} {create_endpoint.get('path', '/')}
+Authorization: Bearer your-token-here
+Content-Type: application/json
+
+{json.dumps(example_data, indent=2)}
+```
+
+"""
+        
+        # Find a GET endpoint for list/search example
+        list_endpoint = None
+        for endpoint in endpoints:
+            if (endpoint.get('method', '').upper() == 'GET' and 
+                not '{' in endpoint.get('path', '') and
+                ('search' in endpoint.get('path', '') or 'list' in endpoint.get('description', '').lower())):
+                list_endpoint = endpoint
+                break
+        
+        if list_endpoint:
+            examples += f"""### {list_endpoint.get('description', 'List Resources')}
+
+```bash
+{list_endpoint.get('method', 'GET').upper()} {list_endpoint.get('path', '/')}
+Authorization: Bearer your-token-here
+```
+
+"""
+        
+        return examples or '### Example Usage\n\nSee the interactive API explorer above to test endpoints.\n\n'
+    
+    def _generate_example_data_for_serializer(self, serializer: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate example data for a serializer"""
+        example_data = {}
+        fields = serializer.get('fields', {})
+        
+        for field_name, field in fields.items():
+            if not field.get('read_only'):
+                example_data[field_name] = self._generate_field_example(field, field_name)
+        
+        return example_data
+    
+    def _generate_field_example(self, field: Dict[str, Any], field_name: str) -> Any:
+        """Generate example value for a field"""
+        if field.get('choices'):
+            choices = field.get('choices')
+            return choices[0][0] if isinstance(choices[0], list) else choices[0]
+        
+        if field.get('default') is not None:
+            return field.get('default')
+        
+        # Generate based on field type
+        field_type = field.get('type', 'CharField')
+        
+        if field_type == 'EmailField':
+            return 'user@example.com'
+        elif field_type == 'URLField':
+            return 'https://example.com'
+        elif field_type in ['IntegerField', 'PositiveIntegerField']:
+            return 1 if 'id' in field_name else 123
+        elif field_type == 'DecimalField':
+            return "99.99" if 'price' in field_name else "123.45"
+        elif field_type == 'BooleanField':
+            return field_name.startswith('is_')
+        elif field_type == 'DateTimeField':
+            return "2023-12-01T12:00:00Z"
+        elif field_type == 'DateField':
+            return "2023-12-01"
+        elif field_type == 'TextField':
+            return f"Sample {field_name.replace('_', ' ')} content"
+        elif field_type == 'CharField':
+            if 'name' in field_name:
+                return f"Sample {field_name}"
+            elif 'email' in field_name:
+                return 'user@example.com'
+            elif 'phone' in field_name:
+                return '+1-555-0123'
+            return f"Sample {field_name}"
+        elif field_type == 'JSONField':
+            return {}
+        elif field_type == 'ForeignKey':
+            return 1
+        elif field_type == 'ManyToManyField':
+            return [1, 2]
+        else:
+            return f"Sample {field_name}"
+    
+    def _copy_react_components(self) -> None:
+        """Copy React components from templates to target Docusaurus project"""
+        try:
+            # Get the path to our template components
+            template_dir = Path(__file__).parent.parent / "templates" / "docusaurus" / "components"
+            target_dir = self.output_dir / "src" / "components"
+            
+            if not template_dir.exists():
+                logger.warning(f"Template components directory not found at {template_dir}")
+                return
+            
+            # Copy each component directory
+            components_to_copy = ['ApiExplorer', 'SwaggerApiDocs']
+            
+            for component_name in components_to_copy:
+                src_component = template_dir / component_name
+                dest_component = target_dir / component_name
+                
+                if src_component.exists():
+                    # Remove existing component if it exists
+                    if dest_component.exists():
+                        shutil.rmtree(dest_component)
+                    
+                    # Copy the entire component directory
+                    shutil.copytree(src_component, dest_component)
+                    logger.info(f"✅ Copied {component_name} component to {dest_component}")
+                else:
+                    logger.warning(f"⚠️ Component {component_name} not found in templates")
+            
+            logger.info(f"🚀 Successfully deployed React components to Docusaurus project")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to copy React components: {str(e)}")
+            # Don't fail the entire generation process if component copying fails
+            pass

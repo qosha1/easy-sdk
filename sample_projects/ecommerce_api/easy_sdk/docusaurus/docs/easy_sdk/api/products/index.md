@@ -4,71 +4,158 @@ sidebar_position: 1
 
 # Products API
 
-The Products API provides endpoints for managing product catalogs, categories, brands, and product images in the e-commerce system.
+import SwaggerApiDocs from '@site/src/components/SwaggerApiDocs';
 
-## Overview
+<SwaggerApiDocs 
+  appName="products"
+  title="Products API"
+  description="The Products API provides endpoints for managing product catalogs, categories, brands, and product images in the e-commerce system. This includes hierarchical product categorization, brand management, product catalog with pricing and inventory, and image management."
+  serializers={[
+    {
+      name: 'CategorySerializer',
+      fields: {
+        id: { type: 'IntegerField', required: false, read_only: true, help_text: 'Category ID' },
+        name: { type: 'CharField', required: true, max_length: 200, help_text: 'Category name' },
+        slug: { type: 'SlugField', required: false, read_only: true, help_text: 'URL-friendly category identifier' },
+        description: { type: 'TextField', required: false, help_text: 'Category description' },
+        parent: { type: 'ForeignKey', required: false, help_text: 'Parent category (for hierarchical structure)' },
+        image: { type: 'ImageField', required: false, help_text: 'Category image' },
+        is_active: { type: 'BooleanField', required: false, help_text: 'Whether category is active' },
+        sort_order: { type: 'IntegerField', required: false, help_text: 'Display order' }
+      },
+      docstring: 'Product category information with hierarchical support'
+    },
+    {
+      name: 'BrandSerializer', 
+      fields: {
+        id: { type: 'IntegerField', required: false, read_only: true, help_text: 'Brand ID' },
+        name: { type: 'CharField', required: true, max_length: 100, help_text: 'Brand name' },
+        slug: { type: 'SlugField', required: false, read_only: true, help_text: 'URL-friendly brand identifier' },
+        description: { type: 'TextField', required: false, help_text: 'Brand description' },
+        logo: { type: 'ImageField', required: false, help_text: 'Brand logo image' },
+        website: { type: 'URLField', required: false, help_text: 'Brand website URL' },
+        is_active: { type: 'BooleanField', required: false, help_text: 'Whether brand is active' }
+      },
+      docstring: 'Product brand information'
+    },
+    {
+      name: 'ProductSerializer',
+      fields: {
+        id: { type: 'IntegerField', required: false, read_only: true, help_text: 'Product ID' },
+        name: { type: 'CharField', required: true, max_length: 200, help_text: 'Product name' },
+        slug: { type: 'SlugField', required: false, read_only: true, help_text: 'URL-friendly product identifier' },
+        description: { type: 'TextField', required: false, help_text: 'Product description' },
+        short_description: { type: 'CharField', required: false, max_length: 500, help_text: 'Brief product description' },
+        price: { type: 'DecimalField', required: true, help_text: 'Product price' },
+        sale_price: { type: 'DecimalField', required: false, help_text: 'Sale/discounted price' },
+        sku: { type: 'CharField', required: true, max_length: 100, help_text: 'Stock keeping unit' },
+        category: { type: 'ForeignKey', required: true, help_text: 'Product category' },
+        brand: { type: 'ForeignKey', required: false, help_text: 'Product brand' },
+        stock_quantity: { type: 'IntegerField', required: false, help_text: 'Available stock quantity' },
+        weight: { type: 'DecimalField', required: false, help_text: 'Product weight' },
+        dimensions: { type: 'CharField', required: false, max_length: 100, help_text: 'Product dimensions' },
+        is_active: { type: 'BooleanField', required: false, help_text: 'Whether product is active' },
+        is_featured: { type: 'BooleanField', required: false, help_text: 'Whether product is featured' },
+        created_date: { type: 'DateTimeField', required: false, read_only: true, help_text: 'Creation timestamp' },
+        updated_date: { type: 'DateTimeField', required: false, read_only: true, help_text: 'Last update timestamp' }
+      },
+      docstring: 'Complete product information with pricing and inventory'
+    },
+    {
+      name: 'ProductImageSerializer',
+      fields: {
+        id: { type: 'IntegerField', required: false, read_only: true, help_text: 'Image ID' },
+        product: { type: 'ForeignKey', required: true, help_text: 'Product this image belongs to' },
+        image: { type: 'ImageField', required: true, help_text: 'Product image file' },
+        alt_text: { type: 'CharField', required: false, max_length: 200, help_text: 'Alternative text for image' },
+        is_primary: { type: 'BooleanField', required: false, help_text: 'Whether this is the primary product image' },
+        sort_order: { type: 'IntegerField', required: false, help_text: 'Display order' }
+      },
+      docstring: 'Product image with metadata'
+    }
+  ]}
+  endpoints={[
+    // Categories
+    { method: 'GET', path: '/api/categories/', description: 'List all categories', serializer_class: 'CategorySerializer', tags: ['Categories'] },
+    { method: 'POST', path: '/api/categories/', description: 'Create a new category', serializer_class: 'CategorySerializer', tags: ['Categories'] },
+    { method: 'GET', path: '/api/categories/{slug}/', description: 'Get category details', serializer_class: 'CategorySerializer', tags: ['Categories'] },
+    { method: 'PUT', path: '/api/categories/{slug}/', description: 'Update category', serializer_class: 'CategorySerializer', tags: ['Categories'] },
+    { method: 'DELETE', path: '/api/categories/{slug}/', description: 'Delete category', tags: ['Categories'] },
+    { method: 'GET', path: '/api/categories/{slug}/products/', description: 'Get products in category', serializer_class: 'ProductSerializer', tags: ['Categories'] },
+    { method: 'GET', path: '/api/categories/{slug}/subcategories/', description: 'Get subcategories', serializer_class: 'CategorySerializer', tags: ['Categories'] },
+    
+    // Brands
+    { method: 'GET', path: '/api/brands/', description: 'List all brands', serializer_class: 'BrandSerializer', tags: ['Brands'] },
+    { method: 'POST', path: '/api/brands/', description: 'Create a new brand', serializer_class: 'BrandSerializer', tags: ['Brands'] },
+    { method: 'GET', path: '/api/brands/{slug}/', description: 'Get brand details', serializer_class: 'BrandSerializer', tags: ['Brands'] },
+    { method: 'PUT', path: '/api/brands/{slug}/', description: 'Update brand', serializer_class: 'BrandSerializer', tags: ['Brands'] },
+    { method: 'DELETE', path: '/api/brands/{slug}/', description: 'Delete brand', tags: ['Brands'] },
+    { method: 'GET', path: '/api/brands/{slug}/products/', description: 'Get products from brand', serializer_class: 'ProductSerializer', tags: ['Brands'] },
+    
+    // Products
+    { method: 'GET', path: '/api/products/', description: 'List all products with pagination and filtering', serializer_class: 'ProductSerializer', tags: ['Products'] },
+    { method: 'POST', path: '/api/products/', description: 'Create a new product', serializer_class: 'ProductSerializer', tags: ['Products'] },
+    { method: 'GET', path: '/api/products/{slug}/', description: 'Get product details', serializer_class: 'ProductSerializer', tags: ['Products'] },
+    { method: 'PUT', path: '/api/products/{slug}/', description: 'Update product', serializer_class: 'ProductSerializer', tags: ['Products'] },
+    { method: 'DELETE', path: '/api/products/{slug}/', description: 'Delete product', tags: ['Products'] },
+    { method: 'GET', path: '/api/products/featured/', description: 'Get featured products', serializer_class: 'ProductSerializer', tags: ['Products'] },
+    { method: 'GET', path: '/api/products/on_sale/', description: 'Get products on sale', serializer_class: 'ProductSerializer', tags: ['Products'] },
+    { method: 'POST', path: '/api/products/search/', description: 'Advanced product search', serializer_class: 'ProductSerializer', tags: ['Products'] },
+    { method: 'POST', path: '/api/products/{slug}/add_image/', description: 'Add product image', serializer_class: 'ProductImageSerializer', tags: ['Products'] },
+    { method: 'DELETE', path: '/api/products/{slug}/remove_image/', description: 'Remove product image', tags: ['Products'] },
+    { method: 'PATCH', path: '/api/products/{slug}/update_stock/', description: 'Update stock quantity', tags: ['Products'] },
+    { method: 'PATCH', path: '/api/products/{slug}/toggle_featured/', description: 'Toggle featured status', tags: ['Products'] },
+    
+    // Product Images
+    { method: 'GET', path: '/api/product-images/', description: 'List product images', serializer_class: 'ProductImageSerializer', tags: ['Product Images'] },
+    { method: 'POST', path: '/api/product-images/', description: 'Upload new image', serializer_class: 'ProductImageSerializer', tags: ['Product Images'] },
+    { method: 'GET', path: '/api/product-images/{id}/', description: 'Get image details', serializer_class: 'ProductImageSerializer', tags: ['Product Images'] },
+    { method: 'PUT', path: '/api/product-images/{id}/', description: 'Update image', serializer_class: 'ProductImageSerializer', tags: ['Product Images'] },
+    { method: 'DELETE', path: '/api/product-images/{id}/', description: 'Delete image', tags: ['Product Images'] },
+    { method: 'PATCH', path: '/api/product-images/{id}/set_primary/', description: 'Set as primary image', tags: ['Product Images'] }
+  ]}
+/>
 
-The products module includes the following main components:
+## Quick Examples
 
-- **Categories** - Hierarchical product categorization
-- **Brands** - Product brand management  
-- **Products** - Core product catalog with pricing and inventory
-- **Product Images** - Image management for products
+### Create a New Product
 
-## Endpoints
+```bash
+POST /api/products/
+Authorization: Bearer your-token-here
+Content-Type: application/json
 
-### Categories
+{
+  "name": "Premium Wireless Headphones",
+  "description": "High-quality wireless headphones with noise cancellation",
+  "short_description": "Premium wireless headphones",
+  "price": "199.99",
+  "sku": "WHD-001",
+  "category": 1,
+  "brand": 2,
+  "stock_quantity": 50,
+  "weight": "0.5",
+  "is_featured": true
+}
+```
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/categories/` | List all categories |
-| POST | `/api/categories/` | Create a new category |
-| GET | `/api/categories/{slug}/` | Get category details |
-| PUT | `/api/categories/{slug}/` | Update category |
-| DELETE | `/api/categories/{slug}/` | Delete category |
-| GET | `/api/categories/{slug}/products/` | Get products in category |
-| GET | `/api/categories/{slug}/subcategories/` | Get subcategories |
+### Search Products
 
-### Brands
+```bash
+POST /api/products/search/
+Authorization: Bearer your-token-here
+Content-Type: application/json
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/brands/` | List all brands |
-| POST | `/api/brands/` | Create a new brand |
-| GET | `/api/brands/{slug}/` | Get brand details |
-| PUT | `/api/brands/{slug}/` | Update brand |
-| DELETE | `/api/brands/{slug}/` | Delete brand |
-| GET | `/api/brands/{slug}/products/` | Get products from brand |
+{
+  "query": "headphones",
+  "category": "electronics",
+  "min_price": 50,
+  "max_price": 300,
+  "brand": "sony"
+}
+```
 
-### Products
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/products/` | List all products |
-| POST | `/api/products/` | Create a new product |
-| GET | `/api/products/{slug}/` | Get product details |
-| PUT | `/api/products/{slug}/` | Update product |
-| DELETE | `/api/products/{slug}/` | Delete product |
-| GET | `/api/products/featured/` | Get featured products |
-| GET | `/api/products/on_sale/` | Get products on sale |
-| POST | `/api/products/search/` | Advanced product search |
-| POST | `/api/products/{slug}/add_image/` | Add product image |
-| DELETE | `/api/products/{slug}/remove_image/` | Remove product image |
-| PATCH | `/api/products/{slug}/update_stock/` | Update stock quantity |
-| PATCH | `/api/products/{slug}/toggle_featured/` | Toggle featured status |
-
-### Product Images
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/product-images/` | List product images |
-| POST | `/api/product-images/` | Upload new image |
-| GET | `/api/product-images/{id}/` | Get image details |
-| PUT | `/api/product-images/{id}/` | Update image |
-| DELETE | `/api/product-images/{id}/` | Delete image |
-| PATCH | `/api/product-images/{id}/set_primary/` | Set as primary image |
-
-## Data Models
+## Legacy Documentation
 
 import DynamicTypeLoader from '@site/src/components/DynamicTypeLoader';
 
@@ -77,55 +164,3 @@ import DynamicTypeLoader from '@site/src/components/DynamicTypeLoader';
   title="Products App Data Models"
   showAllVariants={false}
 />
-
-### Model Summary
-
-The Products app includes the following serializers:
-- **CategorySerializer**: 2 fields
-- **BrandSerializer**: 1 fields  
-- **ProductImageSerializer**: 0 fields
-- **ProductListSerializer**: 6 fields
-- **ProductDetailSerializer**: 10 fields
-- **ProductCreateUpdateSerializer**: 1 fields
-- **ProductSearchSerializer**: 9 fields
-
-### 🎯 Why Multiple Languages & Naming Conventions?
-
-Different development environments have different conventions:
-
-- **Frontend Teams**: Often prefer `camelCase` properties for JavaScript/TypeScript
-- **Backend Teams**: May prefer `snake_case` to match Python/Django conventions  
-- **Mobile Teams**: iOS uses `PascalCase`, Android varies by language
-- **Integration Teams**: Need to match existing codebases and style guides
-
-Easy-SDK generates **all variants automatically** so every team can use their preferred style without manual conversion.
-
-## Filtering and Search
-
-### Query Parameters
-
-- `search` - Text search across name, description, SKU
-- `category` - Filter by category ID
-- `brand` - Filter by brand ID  
-- `price__gte` - Minimum price filter
-- `price__lte` - Maximum price filter
-- `featured` - Filter featured products
-- `status` - Filter by status (active, inactive, draft)
-- `ordering` - Sort by fields (name, price, created_at, etc.)
-
-### Example Requests
-
-```bash
-# Get featured products
-GET /api/products/?featured=true
-
-# Search for products
-GET /api/products/?search=wireless&category=1
-
-# Get products on sale under $100
-GET /api/products/on_sale/?price__lte=100
-```
-
-## Authentication
-
-Most endpoints require authentication. Product creation, updates, and deletions require staff permissions.

@@ -5,7 +5,7 @@ Main CLI entry point for Django API Documentation Generator
 import logging
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import click
 from rich.console import Console
@@ -13,6 +13,7 @@ from rich.logging import RichHandler
 
 from ..core.config import DjangoDocsConfig
 from ..core.generator import DjangoDocsGenerator
+from ..generators.sdk_manager import SDKManager
 
 
 # Setup rich console
@@ -57,7 +58,7 @@ def setup_logging(verbose: bool) -> None:
 @click.option('--exclude-languages', multiple=True, type=click.Choice(['python', 'java', 'csharp', 'go', 'rust', 'swift', 'kotlin']), help='Languages to exclude from generation')
 @click.option('--single-naming-only', is_flag=True, help='Generate only the primary naming convention (disables variants)')
 @click.option('--exclude-naming', multiple=True, type=click.Choice(['snake_case', 'camelCase', 'PascalCase', 'kebab-case', 'SCREAMING_SNAKE', 'lowercase']), help='Naming conventions to exclude from generation')
-@click.version_option(version='0.2.0', prog_name='easy-sdk')
+@click.version_option(version='1.0.0', prog_name='easy-sdk')
 def cli(
     ctx: click.Context,
     project_path: Optional[str],
@@ -86,15 +87,16 @@ def cli(
     exclude_naming: List[str],
 ) -> None:
     """
-    Django API Documentation Generator
+    Django API Documentation & SDK Generator
     
-    Generate comprehensive API documentation from Django REST Framework projects
+    Generate comprehensive API documentation and client SDKs from Django REST Framework projects
     using AI-powered analysis and structural code understanding.
     
     Examples:
         easy-sdk /path/to/django/project
         easy-sdk /path/to/project --config config.toml
-        easy-sdk /path/to/project --apps api users --typescript-only
+        easy-sdk /path/to/project generate-sdk --language python --language typescript
+        easy-sdk /path/to/project --format docusaurus
     """
     # Setup logging
     setup_logging(verbose)
@@ -526,6 +528,229 @@ def _display_analysis_results(scan_result, console: Console) -> None:
         console.print("\n⚠️  Warnings:", style="yellow")
         for warning in scan_result.warnings:
             console.print(f"  • {warning}", style="yellow")
+
+
+@cli.command()
+@click.option('--language', '-l', multiple=True, type=click.Choice(['python', 'typescript', 'javascript', 'ts', 'js']), help='SDK language(s) to generate')
+@click.option('--output-dir', '-o', type=click.Path(), help='Output directory for generated SDKs')
+@click.option('--library-name', help='Custom library name for generated SDKs')
+@click.option('--config', '-c', type=click.Path(exists=True), help='Path to configuration file')
+@click.option('--apps', '-a', multiple=True, help='Specific Django apps to include (default: all)')
+@click.option('--exclude-apps', multiple=True, help='Django apps to exclude')
+@click.option('--verbose', '-v', is_flag=True, help='Enable verbose logging')
+@click.option('--preview-only', is_flag=True, help='Preview SDK structure without generating files')
+@click.option('--ai-provider', type=click.Choice(['openai', 'anthropic', 'local']), help='AI provider for enhanced analysis')
+@click.option('--ai-model', help='AI model to use (e.g., gpt-4, claude-3)')
+@click.option('--no-ai', is_flag=True, help='Disable AI-powered analysis')
+@click.pass_context
+def generate_sdk(
+    ctx: click.Context,
+    language: List[str],
+    output_dir: Optional[str],
+    library_name: Optional[str],
+    config: Optional[str],
+    apps: List[str],
+    exclude_apps: List[str],
+    verbose: bool,
+    preview_only: bool,
+    ai_provider: Optional[str],
+    ai_model: Optional[str],
+    no_ai: bool,
+) -> None:
+    """Generate client SDKs for Django REST API"""
+    try:
+        # Get project path from parent context
+        project_path = ctx.parent.params.get('project_path')
+        
+        if not project_path:
+            console.print("❌ Please provide a Django project path.", style="red")
+            sys.exit(1)
+        
+        setup_logging(verbose)
+        console.print(f"🚀 Starting SDK generation for: {project_path}")
+        
+        # Default to Python and TypeScript if no languages specified
+        if not language:
+            language = ['python', 'typescript']
+            console.print(f"📦 No languages specified, generating: {', '.join(language)}")
+        
+        # Load configuration
+        django_config = _create_config(
+            project_path=project_path,
+            config_file=config,
+            output_dir=output_dir,
+            apps=apps,
+            exclude_apps=exclude_apps,
+            verbose=verbose,
+            ai_provider=ai_provider,
+            ai_model=ai_model,
+            no_ai=no_ai,
+        )
+        
+        # Validate project
+        generator = DjangoDocsGenerator(project_path, config=django_config)
+        validation_errors = generator.validate_project()
+        
+        if validation_errors:
+            console.print("❌ Project validation failed:", style="red")
+            for error in validation_errors:
+                console.print(f"  • {error}", style="red")
+            sys.exit(1)
+        
+        # Analyze Django project
+        console.print("📊 Analyzing Django project...")
+        scan_result = generator.scanner.scan_project(Path(project_path))
+        
+        if not scan_result.success:
+            console.print("❌ Project analysis failed:", style="red")
+            for error in scan_result.errors:
+                console.print(f"  • {error}", style="red")
+            sys.exit(1)
+        
+        # Create SDK manager
+        sdk_manager = SDKManager(django_config)
+        
+        # Validate analysis for SDK generation
+        if not sdk_manager.validate_analysis_result(scan_result.discovered_apps):
+            console.print("❌ Analysis result not suitable for SDK generation", style="red")
+            sys.exit(1)
+        
+        # Preview mode
+        if preview_only:
+            console.print("\n🔍 SDK Structure Previews:")
+            for lang in language:
+                try:
+                    preview = sdk_manager.preview_sdk_structure(
+                        scan_result.discovered_apps,
+                        lang,
+                        library_name
+                    )
+                    _display_sdk_preview(preview, console)
+                except Exception as e:
+                    console.print(f"❌ Preview failed for {lang}: {e}", style="red")
+            return
+        
+        # Generate SDKs
+        console.print(f"🔧 Generating SDKs for {len(language)} language(s)...")
+        
+        if len(language) == 1:
+            # Single language generation
+            lang = language[0]
+            generated_files = sdk_manager.generate_sdk(
+                analysis_result=scan_result.discovered_apps,
+                language=lang,
+                library_name=library_name
+            )
+            
+            console.print(f"✅ {lang.upper()} SDK generated: {len(generated_files)} files")
+            _display_generated_files(generated_files, console)
+            
+        else:
+            # Multiple language generation
+            results = sdk_manager.generate_multiple_sdks(
+                analysis_result=scan_result.discovered_apps,
+                languages=language,
+                library_name=library_name
+            )
+            
+            total_files = 0
+            for lang, files in results.items():
+                if files:
+                    console.print(f"✅ {lang.upper()} SDK: {len(files)} files")
+                    total_files += len(files)
+                else:
+                    console.print(f"❌ {lang.upper()} SDK: Generation failed", style="red")
+            
+            console.print(f"\n🎉 SDK generation completed: {total_files} total files")
+        
+        console.print("✅ SDK generation completed successfully!", style="green")
+    
+    except KeyboardInterrupt:
+        console.print("\n⚠️ Operation cancelled by user", style="yellow")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"💥 SDK generation failed: {str(e)}", style="red")
+        if verbose:
+            console.print_exception()
+        sys.exit(1)
+
+
+@cli.command()
+def list_sdk_languages() -> None:
+    """List supported SDK programming languages"""
+    try:
+        # Create minimal config
+        config = DjangoDocsConfig(project_path=Path.cwd())
+        sdk_manager = SDKManager(config)
+        
+        languages = sdk_manager.list_supported_languages()
+        
+        console.print("🔧 Supported SDK Languages:", style="bold")
+        for lang in languages:
+            try:
+                info = sdk_manager.get_language_info(lang)
+                console.print(f"\n• {lang.upper()}")
+                console.print(f"  Generator: {info['generator']}")
+                if info['description']:
+                    console.print(f"  Description: {info['description']}")
+                if info['features']:
+                    console.print(f"  Features: {', '.join(info['features'][:3])}...")
+            except Exception:
+                console.print(f"\n• {lang.upper()}")
+        
+        console.print(f"\nTotal: {len(languages)} languages supported")
+        
+    except Exception as e:
+        console.print(f"❌ Failed to list languages: {str(e)}", style="red")
+        sys.exit(1)
+
+
+def _display_sdk_preview(preview: Dict[str, Any], console: Console) -> None:
+    """Display SDK structure preview"""
+    from rich.panel import Panel
+    from rich.table import Table
+    
+    # Main info panel
+    console.print(Panel(
+        f"[bold]Language:[/bold] {preview['language'].upper()}\n"
+        f"[bold]Library:[/bold] {preview['library_name']}\n"
+        f"[bold]Package:[/bold] {preview.get('package_name', 'N/A')}\n"
+        f"[bold]Apps:[/bold] {preview['total_apps']}\n"
+        f"[bold]Endpoints:[/bold] {preview['total_endpoints']}\n"
+        f"[bold]Est. Files:[/bold] {preview['estimated_files']}\n"
+        f"[bold]Auth:[/bold] {preview.get('auth_strategy', 'token')}",
+        title=f"{preview['language'].upper()} SDK Preview"
+    ))
+    
+    # Apps table
+    if preview['apps']:
+        table = Table(title="App Structure")
+        table.add_column("App", style="cyan")
+        table.add_column("Endpoints", justify="center", style="green")
+        table.add_column("Models", justify="center", style="blue")
+        table.add_column("Operations", style="magenta")
+        
+        for app in preview['apps']:
+            table.add_row(
+                app['name'],
+                str(app['endpoints']),
+                str(app['models']),
+                ', '.join(app['operations'][:2]) + ('...' if len(app['operations']) > 2 else '')
+            )
+        
+        console.print(table)
+
+
+def _display_generated_files(files: List[Path], console: Console, limit: int = 10) -> None:
+    """Display list of generated files"""
+    console.print(f"\n📁 Generated Files:")
+    
+    for i, file_path in enumerate(files[:limit]):
+        relative_path = file_path.relative_to(file_path.parts[0])
+        console.print(f"  • {relative_path}")
+    
+    if len(files) > limit:
+        console.print(f"  ... and {len(files) - limit} more files")
 
 
 def main() -> None:

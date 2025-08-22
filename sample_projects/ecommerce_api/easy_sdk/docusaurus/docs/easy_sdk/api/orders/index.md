@@ -4,16 +4,152 @@ sidebar_position: 3
 
 # Orders API
 
-The Orders API provides endpoints for managing shopping carts, orders, and payments in the e-commerce system.
+import SwaggerApiDocs from '@site/src/components/SwaggerApiDocs';
 
-## Overview
+<SwaggerApiDocs 
+  appName="orders"
+  title="Orders API"
+  description="The Orders API provides endpoints for managing shopping carts, orders, and payments in the e-commerce system. This includes cart management for authenticated and anonymous users, order processing and management, payment processing and tracking, and individual order items."
+  serializers={[
+    {
+      name: 'CartSerializer',
+      fields: {
+        id: { type: 'IntegerField', required: false, read_only: true, help_text: 'Cart ID' },
+        user: { type: 'ForeignKey', required: false, read_only: true, help_text: 'User this cart belongs to (null for anonymous)' },
+        session_key: { type: 'CharField', required: false, help_text: 'Session key for anonymous users' },
+        total_items: { type: 'IntegerField', required: false, read_only: true, help_text: 'Total number of items in cart' },
+        total_price: { type: 'DecimalField', required: false, read_only: true, help_text: 'Total price of all items' },
+        created_date: { type: 'DateTimeField', required: false, read_only: true, help_text: 'Cart creation date' },
+        updated_date: { type: 'DateTimeField', required: false, read_only: true, help_text: 'Last update date' }
+      },
+      docstring: 'Shopping cart information and totals'
+    },
+    {
+      name: 'CartItemSerializer', 
+      fields: {
+        id: { type: 'IntegerField', required: false, read_only: true, help_text: 'Cart item ID' },
+        product: { type: 'ForeignKey', required: true, help_text: 'Product in the cart' },
+        quantity: { type: 'IntegerField', required: true, help_text: 'Quantity of this product' },
+        unit_price: { type: 'DecimalField', required: false, read_only: true, help_text: 'Price per unit' },
+        total_price: { type: 'DecimalField', required: false, read_only: true, help_text: 'Total price for this line item' }
+      },
+      docstring: 'Individual item within a shopping cart'
+    },
+    {
+      name: 'OrderSerializer',
+      fields: {
+        id: { type: 'IntegerField', required: false, read_only: true, help_text: 'Order ID' },
+        order_number: { type: 'CharField', required: false, read_only: true, help_text: 'Unique order number' },
+        user: { type: 'ForeignKey', required: true, help_text: 'User who placed the order' },
+        status: { type: 'CharField', required: false, choices: [['pending', 'Pending'], ['confirmed', 'Confirmed'], ['processing', 'Processing'], ['shipped', 'Shipped'], ['delivered', 'Delivered'], ['cancelled', 'Cancelled']], help_text: 'Order status' },
+        total_amount: { type: 'DecimalField', required: false, read_only: true, help_text: 'Total order amount' },
+        shipping_address: { type: 'JSONField', required: true, help_text: 'Shipping address details' },
+        billing_address: { type: 'JSONField', required: true, help_text: 'Billing address details' },
+        payment_method: { type: 'CharField', required: true, help_text: 'Payment method used' },
+        customer_notes: { type: 'TextField', required: false, help_text: 'Customer notes for the order' },
+        created_date: { type: 'DateTimeField', required: false, read_only: true, help_text: 'Order creation date' },
+        updated_date: { type: 'DateTimeField', required: false, read_only: true, help_text: 'Last update date' }
+      },
+      docstring: 'Complete order information including addresses and payment'
+    },
+    {
+      name: 'PaymentSerializer',
+      fields: {
+        id: { type: 'IntegerField', required: false, read_only: true, help_text: 'Payment ID' },
+        order: { type: 'ForeignKey', required: true, help_text: 'Order this payment is for' },
+        amount: { type: 'DecimalField', required: true, help_text: 'Payment amount' },
+        payment_method: { type: 'CharField', required: true, help_text: 'Payment method (credit_card, paypal, etc.)' },
+        transaction_id: { type: 'CharField', required: false, help_text: 'External transaction identifier' },
+        status: { type: 'CharField', required: false, choices: [['pending', 'Pending'], ['completed', 'Completed'], ['failed', 'Failed'], ['refunded', 'Refunded']], help_text: 'Payment status' },
+        created_date: { type: 'DateTimeField', required: false, read_only: true, help_text: 'Payment date' }
+      },
+      docstring: 'Payment transaction details'
+    }
+  ]}
+  endpoints={[
+    // Cart Management
+    { method: 'GET', path: '/api/carts/', description: 'Get current user cart', serializer_class: 'CartSerializer', tags: ['Cart Management'] },
+    { method: 'GET', path: '/api/carts/{id}/', description: 'Get cart details', serializer_class: 'CartSerializer', tags: ['Cart Management'] },
+    { method: 'POST', path: '/api/carts/add_item/', description: 'Add item to cart', serializer_class: 'CartItemSerializer', tags: ['Cart Management'] },
+    { method: 'PATCH', path: '/api/carts/update_item/', description: 'Update cart item quantity', tags: ['Cart Management'] },
+    { method: 'DELETE', path: '/api/carts/remove_item/', description: 'Remove item from cart', tags: ['Cart Management'] },
+    { method: 'DELETE', path: '/api/carts/clear/', description: 'Clear all cart items', tags: ['Cart Management'] },
+    { method: 'POST', path: '/api/carts/checkout/', description: 'Convert cart to order', serializer_class: 'OrderSerializer', tags: ['Cart Management'] },
+    
+    // Cart Items
+    { method: 'GET', path: '/api/cart-items/', description: 'List cart items', serializer_class: 'CartItemSerializer', tags: ['Cart Management'] },
+    { method: 'POST', path: '/api/cart-items/', description: 'Add cart item', serializer_class: 'CartItemSerializer', tags: ['Cart Management'] },
+    { method: 'GET', path: '/api/cart-items/{id}/', description: 'Get cart item', serializer_class: 'CartItemSerializer', tags: ['Cart Management'] },
+    { method: 'PUT', path: '/api/cart-items/{id}/', description: 'Update cart item', serializer_class: 'CartItemSerializer', tags: ['Cart Management'] },
+    { method: 'DELETE', path: '/api/cart-items/{id}/', description: 'Delete cart item', tags: ['Cart Management'] },
+    
+    // Order Management
+    { method: 'GET', path: '/api/orders/', description: 'List orders', serializer_class: 'OrderSerializer', tags: ['Order Management'] },
+    { method: 'POST', path: '/api/orders/', description: 'Create new order', serializer_class: 'OrderSerializer', tags: ['Order Management'] },
+    { method: 'GET', path: '/api/orders/{id}/', description: 'Get order details', serializer_class: 'OrderSerializer', tags: ['Order Management'] },
+    { method: 'PUT', path: '/api/orders/{id}/', description: 'Update order (admin)', serializer_class: 'OrderSerializer', tags: ['Order Management'] },
+    { method: 'PATCH', path: '/api/orders/{id}/', description: 'Partial order update', serializer_class: 'OrderSerializer', tags: ['Order Management'] },
+    { method: 'DELETE', path: '/api/orders/{id}/', description: 'Cancel order', tags: ['Order Management'] },
+    { method: 'GET', path: '/api/orders/my_orders/', description: 'Get current user orders', serializer_class: 'OrderSerializer', tags: ['Order Management'] },
+    { method: 'GET', path: '/api/orders/recent/', description: 'Get recent orders (30 days)', serializer_class: 'OrderSerializer', tags: ['Order Management'] },
+    { method: 'PATCH', path: '/api/orders/{id}/update_status/', description: 'Update order status (admin)', tags: ['Order Management'] },
+    { method: 'POST', path: '/api/orders/{id}/cancel/', description: 'Cancel order', tags: ['Order Management'] },
+    
+    // Payment Management
+    { method: 'GET', path: '/api/payments/', description: 'List payments', serializer_class: 'PaymentSerializer', tags: ['Payment Management'] },
+    { method: 'GET', path: '/api/payments/{id}/', description: 'Get payment details', serializer_class: 'PaymentSerializer', tags: ['Payment Management'] },
+    { method: 'PATCH', path: '/api/payments/{id}/update_status/', description: 'Update payment status (admin)', tags: ['Payment Management'] },
+    { method: 'POST', path: '/api/payments/{id}/process/', description: 'Process payment (admin)', tags: ['Payment Management'] }
+  ]}
+/>
 
-The orders module includes:
+## Quick Examples
 
-- **Carts** - Shopping cart management for authenticated and anonymous users
-- **Orders** - Order processing and management
-- **Payments** - Payment processing and tracking
-- **Order Items** - Individual items within orders
+### Add Item to Cart
+
+```bash
+POST /api/carts/add_item/
+Authorization: Bearer your-token-here
+Content-Type: application/json
+
+{
+  "product": 1,
+  "quantity": 2
+}
+```
+
+### Checkout Cart
+
+```bash
+POST /api/carts/checkout/
+Authorization: Bearer your-token-here
+Content-Type: application/json
+
+{
+  "shipping_address": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "address_line_1": "123 Main St",
+    "city": "Anytown",
+    "state_province": "CA",
+    "postal_code": "12345",
+    "country": "US"
+  },
+  "billing_address": {
+    "first_name": "John",
+    "last_name": "Doe", 
+    "address_line_1": "123 Main St",
+    "city": "Anytown",
+    "state_province": "CA",
+    "postal_code": "12345",
+    "country": "US"
+  },
+  "payment_method": "credit_card",
+  "customer_notes": "Please leave at door"
+}
+```
+
+## Legacy Documentation
 
 ## Cart Management
 

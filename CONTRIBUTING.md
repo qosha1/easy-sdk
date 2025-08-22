@@ -1,6 +1,6 @@
-# Contributing to Django API Documentation Generator
+# Contributing to Easy SDK
 
-Thank you for your interest in contributing to the Django API Documentation Generator! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to Easy SDK! This document provides guidelines and information for contributors.
 
 ## 🚀 Getting Started
 
@@ -8,8 +8,8 @@ Thank you for your interest in contributing to the Django API Documentation Gene
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/easy-sdk/django-api-docs-generator.git
-   cd django-api-docs-generator
+   git clone https://github.com/easy-sdk/easy-sdk.git
+   cd easy-sdk
    ```
 
 2. **Create a virtual environment**
@@ -128,11 +128,23 @@ src/easy_sdk/
 ├── ai/                # AI integration
 │   ├── engine.py      # AI analysis engine
 │   └── prompts.py     # AI prompt templates
-├── generators/        # Documentation generators
+├── generators/        # Documentation & SDK generators
 │   ├── sphinx_generator.py    # Sphinx documentation
-│   └── typescript_generator.py # TypeScript types
+│   ├── docusaurus_generator.py # Interactive Docusaurus docs
+│   ├── typescript_generator.py # TypeScript types
+│   ├── sdk_manager.py          # Multi-language SDK orchestration
+│   └── sdks/                   # SDK generators
+│       ├── base_sdk_generator.py    # Abstract base for all SDKs
+│       ├── python_sdk_generator.py  # Python SDK generation
+│       └── typescript_sdk_generator.py # TypeScript SDK generation
+├── templates/         # Code generation templates
+│   ├── docusaurus/    # Docusaurus React components
+│   │   └── components/
+│   │       ├── ApiExplorer/      # Interactive API testing
+│   │       └── SwaggerApiDocs/   # Swagger-like interface
+│   └── sdks/          # SDK templates for various languages
 └── cli/               # Command-line interface
-    └── main.py        # CLI implementation
+    └── main.py        # CLI implementation with SDK commands
 ```
 
 ### Design Principles
@@ -168,6 +180,15 @@ src/easy_sdk/
 3. Integrate with the main scanning workflow
 4. Add configuration options if needed
 5. Include thorough testing
+
+#### New SDK Generator
+
+1. Create generator class inheriting from `BaseSDKGenerator`
+2. Implement all abstract methods (generate_sdk, _generate_client_class, _generate_models, _generate_project_structure)
+3. Add language-specific templates and file structures
+4. Register the new generator in `SDKManager.SUPPORTED_LANGUAGES`
+5. Add CLI support for the new language
+6. Include comprehensive tests and documentation
 
 ## 🧪 Testing Guidelines
 
@@ -310,27 +331,42 @@ Use the provided issue templates for:
 
 ### High-Impact Areas
 
-1. **AI Provider Support**
-   - Add support for local/offline models
+1. **SDK Generator Support**
+   - Add new programming languages (Java, C#, Go, Rust, Swift, Kotlin)
+   - Implement GraphQL SDK generation
+   - Add testing framework integration
+   - Docker containerization templates
+
+2. **AI Provider Support**
+   - Add support for local/offline models (Ollama, LM Studio)
    - Implement caching for AI responses
    - Add model-specific optimizations
+   - Support for specialized coding models
 
-2. **Django Feature Support**
+3. **Django Feature Support**
    - Generic foreign keys
    - Custom field types
    - Advanced serializer methods
    - Websocket endpoints
+   - File upload/download endpoints
 
-3. **Documentation Generators**
+4. **Interactive Documentation**
+   - Enhanced Swagger-like UI components
+   - Real-time API testing with WebSockets
+   - API versioning support
+   - Custom authentication flows
+
+5. **Documentation Generators**
    - OpenAPI/Swagger spec generation
    - Postman collection export
    - PDF documentation export
-   - Interactive API explorer
+   - Markdown documentation templates
 
-4. **Performance Optimization**
+6. **Performance Optimization**
    - Parallel processing for large projects
    - Incremental analysis updates
    - Memory usage optimization
+   - SDK compilation optimizations
 
 ### Good First Issues
 
@@ -359,4 +395,4 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
 ---
 
-Thank you for contributing to Django API Documentation Generator! 🎉
+Thank you for contributing to Easy SDK! 🎉

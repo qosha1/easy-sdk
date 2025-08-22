@@ -468,3 +468,337 @@ class SerializerAnalyzer:
             dependencies[serializer.name] = deps
         
         return dependencies
+    
+    def extract_input_output_schemas(self, serializers: List[SerializerInfo]) -> Dict[str, Dict]:
+        """Extract detailed input and output schemas for each serializer"""
+        schemas = {}
+        
+        for serializer in serializers:
+            schema = {
+                'input_schema': self._build_input_schema(serializer),
+                'output_schema': self._build_output_schema(serializer),
+                'validation_rules': self._extract_validation_rules(serializer),
+                'field_mappings': self._extract_field_mappings(serializer)
+            }
+            schemas[serializer.name] = schema
+        
+        return schemas
+    
+    def _build_input_schema(self, serializer: SerializerInfo) -> Dict[str, Any]:
+        """Build input schema showing what data can be sent to this serializer"""
+        input_fields = {}
+        required_fields = []
+        
+        for field_name, field in serializer.fields.items():
+            if field.read_only:
+                continue
+                
+            field_schema = {
+                'type': self._map_field_type_to_json_type(field.field_type),
+                'description': field.help_text or f"{field_name.replace('_', ' ').title()} field",
+                'nullable': field.allow_null,
+                'default': field.default
+            }
+            
+            # Add validation constraints
+            if field.max_length:
+                field_schema['maxLength'] = field.max_length
+            if field.min_length:
+                field_schema['minLength'] = field.min_length
+            if field.max_value:
+                field_schema['maximum'] = field.max_value
+            if field.min_value:
+                field_schema['minimum'] = field.min_value
+            if field.choices:
+                field_schema['enum'] = [choice[0] if isinstance(choice, tuple) else choice for choice in field.choices]
+            
+            # Handle nested serializers
+            if field.nested_serializer:
+                field_schema['type'] = 'object'
+                field_schema['$ref'] = f"#/components/schemas/{field.nested_serializer}"
+            
+            # Handle list fields
+            if field.child_field:
+                field_schema['type'] = 'array'
+                field_schema['items'] = {
+                    'type': self._map_field_type_to_json_type(field.child_field.field_type)
+                }
+            
+            input_fields[field_name] = field_schema
+            
+            if field.required and field.default is None:
+                required_fields.append(field_name)
+        
+        return {
+            'type': 'object',
+            'properties': input_fields,
+            'required': required_fields
+        }
+    
+    def _build_output_schema(self, serializer: SerializerInfo) -> Dict[str, Any]:
+        """Build output schema showing what data this serializer returns"""
+        output_fields = {}
+        
+        for field_name, field in serializer.fields.items():
+            if field.write_only:
+                continue
+                
+            field_schema = {
+                'type': self._map_field_type_to_json_type(field.field_type),
+                'description': field.help_text or f"{field_name.replace('_', ' ').title()} field",
+                'nullable': field.allow_null
+            }
+            
+            # Add format information
+            if field.field_type == 'date':
+                field_schema['format'] = 'date'
+            elif field.field_type == 'datetime':
+                field_schema['format'] = 'date-time'
+            elif field.field_type == 'email':
+                field_schema['format'] = 'email'
+            elif field.field_type == 'url':
+                field_schema['format'] = 'uri'
+            elif field.field_type == 'uuid':
+                field_schema['format'] = 'uuid'
+            
+            # Handle choices
+            if field.choices:
+                field_schema['enum'] = [choice[0] if isinstance(choice, tuple) else choice for choice in field.choices]
+            
+            # Handle nested serializers
+            if field.nested_serializer:
+                field_schema['type'] = 'object'
+                field_schema['$ref'] = f"#/components/schemas/{field.nested_serializer}"
+            
+            # Handle list fields
+            if field.child_field:
+                field_schema['type'] = 'array'
+                field_schema['items'] = {
+                    'type': self._map_field_type_to_json_type(field.child_field.field_type)
+                }
+            
+            output_fields[field_name] = field_schema
+        
+        return {
+            'type': 'object',
+            'properties': output_fields
+        }
+    
+    def _map_field_type_to_json_type(self, field_type: str) -> str:
+        """Map DRF field types to JSON Schema types"""
+        type_mapping = {
+            'boolean': 'boolean',
+            'string': 'string',
+            'choice': 'string',
+            'date': 'string',
+            'datetime': 'string',
+            'decimal': 'number',
+            'object': 'object',
+            'email': 'string',
+            'file': 'string',
+            'image': 'string',
+            'float': 'number',
+            'integer': 'integer',
+            'json': 'object',
+            'list': 'array',
+            'primary_key': 'integer',
+            'method': 'string',  # SerializerMethodField default
+            'slug': 'string',
+            'time': 'string',
+            'url': 'string',
+            'uuid': 'string',
+            'hyperlink_identity': 'string',
+            'hyperlink_related': 'string',
+            'string_related': 'string',
+            'slug_related': 'string',
+        }
+        return type_mapping.get(field_type, 'string')
+    
+    def _extract_validation_rules(self, serializer: SerializerInfo) -> Dict[str, List[str]]:
+        """Extract validation rules for each field"""
+        validation_rules = {}
+        
+        for field_name, field in serializer.fields.items():
+            rules = []
+            
+            if field.required:
+                rules.append("required")
+            if not field.allow_null:
+                rules.append("not_null")
+            if not field.allow_blank:
+                rules.append("not_blank")
+            if field.max_length:
+                rules.append(f"max_length({field.max_length})")
+            if field.min_length:
+                rules.append(f"min_length({field.min_length})")
+            if field.max_value:
+                rules.append(f"max_value({field.max_value})")
+            if field.min_value:
+                rules.append(f"min_value({field.min_value})")
+            if field.choices:
+                choices_str = ", ".join([str(choice[0] if isinstance(choice, tuple) else choice) for choice in field.choices])
+                rules.append(f"choices({choices_str})")
+            if field.validators:
+                for validator in field.validators:
+                    rules.append(f"validator({validator})")
+            
+            if rules:
+                validation_rules[field_name] = rules
+        
+        return validation_rules
+    
+    def _extract_field_mappings(self, serializer: SerializerInfo) -> Dict[str, Dict[str, str]]:
+        """Extract field mappings between serializer fields and model fields"""
+        field_mappings = {}
+        
+        for field_name, field in serializer.fields.items():
+            mapping_info = {
+                'serializer_field': field_name,
+                'source_field': field.source or field_name,
+                'field_type': field.field_type,
+                'is_read_only': field.read_only,
+                'is_write_only': field.write_only
+            }
+            
+            if field.method_name:
+                mapping_info['method_name'] = field.method_name
+                mapping_info['computed'] = True
+            else:
+                mapping_info['computed'] = False
+            
+            if field.related_model:
+                mapping_info['related_model'] = field.related_model
+            
+            field_mappings[field_name] = mapping_info
+        
+        return field_mappings
+    
+    def generate_serializer_examples(self, serializer: SerializerInfo) -> Dict[str, Any]:
+        """Generate example input and output data for a serializer"""
+        examples = {
+            'input_example': self._generate_input_example(serializer),
+            'output_example': self._generate_output_example(serializer),
+            'validation_error_examples': self._generate_validation_error_examples(serializer)
+        }
+        return examples
+    
+    def _generate_input_example(self, serializer: SerializerInfo) -> Dict[str, Any]:
+        """Generate example input data"""
+        example = {}
+        
+        for field_name, field in serializer.fields.items():
+            if field.read_only:
+                continue
+                
+            example_value = self._generate_field_example_value(field)
+            if example_value is not None:
+                example[field_name] = example_value
+        
+        return example
+    
+    def _generate_output_example(self, serializer: SerializerInfo) -> Dict[str, Any]:
+        """Generate example output data"""
+        example = {}
+        
+        for field_name, field in serializer.fields.items():
+            if field.write_only:
+                continue
+                
+            example_value = self._generate_field_example_value(field, is_output=True)
+            if example_value is not None:
+                example[field_name] = example_value
+        
+        return example
+    
+    def _generate_field_example_value(self, field: SerializerField, is_output: bool = False) -> Any:
+        """Generate an example value for a field"""
+        field_name = field.name.lower()
+        
+        # Use default value if available
+        if field.default is not None and field.default != "":
+            return field.default
+        
+        # Use choices if available
+        if field.choices:
+            return field.choices[0][0] if isinstance(field.choices[0], tuple) else field.choices[0]
+        
+        # Generate based on field type
+        type_examples = {
+            'boolean': True,
+            'integer': 42,
+            'float': 3.14,
+            'decimal': "99.99",
+            'string': self._generate_string_example(field_name, field),
+            'email': "user@example.com",
+            'url': "https://example.com",
+            'uuid': "123e4567-e89b-12d3-a456-426614174000",
+            'date': "2023-12-01",
+            'datetime': "2023-12-01T12:00:00Z",
+            'time': "12:00:00",
+            'slug': field_name.replace('_', '-'),
+            'primary_key': 1 if not is_output else 123,
+            'json': {},
+            'list': [],
+            'file': "file.txt",
+            'image': "image.jpg",
+        }
+        
+        return type_examples.get(field.field_type, "string")
+    
+    def _generate_string_example(self, field_name: str, field: SerializerField) -> str:
+        """Generate a string example based on field name and constraints"""
+        # Common field name patterns
+        if 'name' in field_name:
+            return "Example Name"
+        elif 'title' in field_name:
+            return "Example Title"
+        elif 'description' in field_name:
+            return "This is an example description"
+        elif 'email' in field_name:
+            return "user@example.com"
+        elif 'phone' in field_name:
+            return "+1234567890"
+        elif 'address' in field_name:
+            return "123 Example St, City, State"
+        elif 'sku' in field_name:
+            return "SKU-12345"
+        elif 'code' in field_name:
+            return "CODE123"
+        else:
+            base_example = f"example_{field_name}"
+            
+            # Respect max_length constraint
+            if field.max_length and len(base_example) > field.max_length:
+                return base_example[:field.max_length-3] + "..."
+            
+            return base_example
+    
+    def _generate_validation_error_examples(self, serializer: SerializerInfo) -> Dict[str, Dict]:
+        """Generate examples of validation errors"""
+        error_examples = {}
+        
+        # Required field error
+        required_fields = [name for name, field in serializer.fields.items() 
+                          if field.required and not field.read_only]
+        if required_fields:
+            error_examples["missing_required_fields"] = {
+                "error": {
+                    required_fields[0]: ["This field is required."]
+                },
+                "status_code": 400
+            }
+        
+        # Invalid choice error
+        choice_fields = [(name, field) for name, field in serializer.fields.items() 
+                        if field.choices and not field.read_only]
+        if choice_fields:
+            field_name, field = choice_fields[0]
+            valid_choices = [choice[0] if isinstance(choice, tuple) else choice for choice in field.choices]
+            error_examples["invalid_choice"] = {
+                "error": {
+                    field_name: [f'"invalid_choice" is not a valid choice. Valid choices are: {", ".join(map(str, valid_choices))}']
+                },
+                "status_code": 400
+            }
+        
+        return error_examples

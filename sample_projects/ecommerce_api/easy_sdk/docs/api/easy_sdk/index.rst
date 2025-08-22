@@ -13,7 +13,7 @@ Project Information
 - **Project:** Django API
 - **Version:** 1.0.0
 - **Description:** Auto-generated API documentation
-- **Generated:** 2025-08-21 18:16:44
+- **Generated:** 2025-08-21 19:37:41
 
 API Reference
 -------------

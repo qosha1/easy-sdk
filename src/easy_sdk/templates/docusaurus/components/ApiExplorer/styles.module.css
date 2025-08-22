@@ -1,0 +1,545 @@
+/* API Explorer Styles - Swagger-like interface */
+
+.apiExplorer {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: #fafafa;
+  min-height: 100vh;
+}
+
+/* Header Section */
+.header {
+  background: white;
+  padding: 24px;
+  border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.titleSection {
+  flex: 1;
+}
+
+.title {
+  font-size: 36px;
+  font-weight: 700;
+  color: #3b4151;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.version {
+  background: #89bf04;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.spec {
+  background: #61affe;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.description {
+  color: #3b4151;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.serverSection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.serverLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #3b4151;
+  text-transform: uppercase;
+}
+
+.serverSelect {
+  padding: 8px 12px;
+  border: 2px solid #d9d9d9;
+  border-radius: 4px;
+  background: white;
+  font-size: 14px;
+  color: #3b4151;
+  min-width: 200px;
+}
+
+.authorizeBtn {
+  background: #4990e2;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.authorizeBtn:hover {
+  background: #357abd;
+}
+
+/* API Groups */
+.apiGroups {
+  padding: 0 24px 24px;
+}
+
+.apiGroup {
+  margin-bottom: 32px;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.groupTitle {
+  font-size: 24px;
+  font-weight: 600;
+  color: #3b4151;
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.groupToggle {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #3b4151;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Endpoint Cards */
+.endpointCard {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.endpointHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.endpointHeader:hover {
+  background: #f7f7f7;
+}
+
+.endpointInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.methodBadge {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  min-width: 60px;
+  text-align: center;
+}
+
+.methodGet { background: #61affe; color: white; }
+.methodPost { background: #49cc90; color: white; }
+.methodPut { background: #fca130; color: white; }
+.methodPatch { background: #50e3c2; color: white; }
+.methodDelete { background: #f93e3e; color: white; }
+.methodDefault { background: #9012fe; color: white; }
+
+.endpointPath {
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: #3b4151;
+}
+
+.endpointSummary {
+  color: #3b4151;
+  font-size: 14px;
+}
+
+.endpointActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lockIcon {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.expandIcon {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #3b4151;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Endpoint Details */
+.endpointDetails {
+  border-top: 1px solid #e8e8e8;
+  background: #f7f7f7;
+}
+
+.detailTabs {
+  display: flex;
+  background: white;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: 16px 24px;
+  font-size: 14px;
+  color: #3b4151;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.tab:hover {
+  background: #f7f7f7;
+}
+
+.activeTab {
+  border-bottom-color: #61affe;
+  color: #61affe;
+  font-weight: 600;
+}
+
+/* Try It Out Section */
+.tryItOut {
+  padding: 24px;
+}
+
+.parametersSection {
+  margin-bottom: 24px;
+}
+
+.parametersSection h4 {
+  color: #3b4151;
+  font-size: 16px;
+  margin: 0 0 16px 0;
+  font-weight: 600;
+}
+
+.parameter {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+}
+
+.paramLabel {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #3b4151;
+  margin-bottom: 8px;
+}
+
+.required {
+  color: #f93e3e;
+  margin-left: 4px;
+}
+
+.paramType {
+  font-weight: normal;
+  color: #999;
+  font-size: 12px;
+}
+
+.paramInput {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #3b4151;
+}
+
+.paramInput:focus {
+  outline: none;
+  border-color: #61affe;
+  box-shadow: 0 0 0 2px rgba(97, 175, 254, 0.2);
+}
+
+.paramDescription {
+  font-size: 12px;
+  color: #666;
+  margin: 8px 0 0 0;
+  line-height: 1.4;
+}
+
+/* Request Body Section */
+.requestBodySection {
+  margin-bottom: 24px;
+}
+
+.requestBodySection h4 {
+  color: #3b4151;
+  font-size: 16px;
+  margin: 0 0 16px 0;
+  font-weight: 600;
+}
+
+.requestBodyEditor {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  background: white;
+  resize: vertical;
+}
+
+.requestBodyEditor:focus {
+  outline: none;
+  border-color: #61affe;
+  box-shadow: 0 0 0 2px rgba(97, 175, 254, 0.2);
+}
+
+/* Execute Button */
+.executeBtn {
+  background: #4990e2;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 24px;
+}
+
+.executeBtn:hover:not(:disabled) {
+  background: #357abd;
+}
+
+.executeBtn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Response Section */
+.responseSection {
+  margin-top: 24px;
+}
+
+.responseSection h4 {
+  color: #3b4151;
+  font-size: 16px;
+  margin: 0 0 16px 0;
+  font-weight: 600;
+}
+
+.responseHeader {
+  background: white;
+  padding: 12px 16px;
+  border-radius: 4px 4px 0 0;
+  border: 1px solid #e8e8e8;
+  border-bottom: none;
+}
+
+.statusCode {
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.success { background: #49cc90; color: white; }
+.error { background: #f93e3e; color: white; }
+.info { background: #61affe; color: white; }
+
+.responseBody {
+  background: #263238;
+  color: #f8f8f2;
+  padding: 16px;
+  border-radius: 0 0 4px 4px;
+  border: 1px solid #e8e8e8;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  overflow-x: auto;
+  margin: 0;
+}
+
+/* Schema Tab */
+.schemaTab {
+  padding: 24px;
+}
+
+.schemaViewer {
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+  margin-bottom: 24px;
+}
+
+.schemaTitle {
+  color: #3b4151;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.schemaDescription {
+  padding: 0 20px 16px;
+  color: #666;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.schemaContent {
+  padding: 16px 20px;
+}
+
+.schemaObject {
+  border-left: 2px solid #e8e8e8;
+  padding-left: 12px;
+  margin-left: 8px;
+}
+
+.schemaProperty {
+  margin-bottom: 12px;
+}
+
+.propertyHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+.propertyName {
+  font-family: monospace;
+  font-weight: 600;
+  color: #3b4151;
+  font-size: 14px;
+}
+
+.propertyType {
+  font-size: 12px;
+  color: #999;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.propertyDescription {
+  margin: 4px 0 0 0;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.expandIcon {
+  margin-left: auto;
+  font-size: 16px;
+  color: #999;
+}
+
+.schemaExample {
+  padding: 16px 20px;
+  border-top: 1px solid #e8e8e8;
+  background: #f7f7f7;
+}
+
+.schemaExample h5 {
+  margin: 0 0 12px 0;
+  color: #3b4151;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.exampleCode {
+  background: #263238;
+  color: #f8f8f2;
+  padding: 12px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  overflow-x: auto;
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .serverSection {
+    align-items: flex-start;
+    width: 100%;
+  }
+  
+  .serverSelect {
+    width: 100%;
+  }
+  
+  .endpointInfo {
+    flex-wrap: wrap;
+  }
+  
+  .endpointPath {
+    font-size: 14px;
+  }
+  
+  .apiGroups {
+    padding: 0 16px 24px;
+  }
+  
+  .tryItOut {
+    padding: 16px;
+  }
+}

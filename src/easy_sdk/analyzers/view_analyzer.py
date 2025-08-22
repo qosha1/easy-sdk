@@ -600,3 +600,428 @@ class ViewAnalyzer:
             return resolved
         except Exception:
             return default_path
+    
+    def extract_endpoint_schemas(self, views: List[ViewInfo]) -> Dict[str, Dict]:
+        """Extract detailed endpoint schemas for each view"""
+        schemas = {}
+        
+        for view in views:
+            view_schemas = {}
+            
+            for endpoint in view.endpoints:
+                endpoint_key = f"{endpoint.method}_{endpoint.path.replace('/', '_').replace('{', '').replace('}', '').strip('_')}"
+                
+                schema = {
+                    'method': endpoint.method,
+                    'path': endpoint.path,
+                    'description': endpoint.description,
+                    'parameters': self._extract_endpoint_parameters(endpoint, view),
+                    'request_schema': self._build_endpoint_request_schema(endpoint, view),
+                    'response_schema': self._build_endpoint_response_schema(endpoint, view),
+                    'status_codes': self._determine_status_codes(endpoint),
+                    'authentication': self._extract_authentication_info(endpoint, view),
+                    'permissions': self._extract_permission_info(endpoint, view),
+                    'filters': self._extract_filter_info(view),
+                    'pagination': self._extract_pagination_info(view)
+                }
+                
+                view_schemas[endpoint_key] = schema
+            
+            schemas[view.name] = view_schemas
+        
+        return schemas
+    
+    def _extract_endpoint_parameters(self, endpoint: ViewEndpoint, view: ViewInfo) -> List[Dict]:
+        """Extract path and query parameters for an endpoint"""
+        parameters = []
+        
+        # Extract path parameters
+        import re
+        path_params = re.findall(r'\{(\w+)\}', endpoint.path)
+        for param in path_params:
+            param_info = {
+                'name': param,
+                'in': 'path',
+                'required': True,
+                'type': 'string',  # Default, could be enhanced
+                'description': f"Path parameter: {param}"
+            }
+            
+            # Common parameter types
+            if param in ['id', 'pk']:
+                param_info['type'] = 'integer'
+                param_info['description'] = f"Unique identifier for the {view.model or 'resource'}"
+            elif param in ['slug']:
+                param_info['type'] = 'string'
+                param_info['description'] = f"URL slug for the {view.model or 'resource'}"
+            
+            parameters.append(param_info)
+        
+        # Extract query parameters based on view configuration
+        if endpoint.method == 'GET':
+            # Search parameters
+            if view.search_fields:
+                parameters.append({
+                    'name': 'search',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                    'description': f"Search in fields: {', '.join(view.search_fields)}"
+                })
+            
+            # Ordering parameters
+            if view.ordering_fields:
+                parameters.append({
+                    'name': 'ordering',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                    'description': f"Order by fields: {', '.join(view.ordering_fields)}. Prefix with '-' for descending order."
+                })
+            
+            # Pagination parameters
+            if 'list' in endpoint.function_name.lower() or endpoint.path.endswith('/'):
+                parameters.extend([
+                    {
+                        'name': 'page',
+                        'in': 'query',
+                        'required': False,
+                        'type': 'integer',
+                        'description': 'Page number for pagination'
+                    },
+                    {
+                        'name': 'page_size',
+                        'in': 'query',
+                        'required': False,
+                        'type': 'integer',
+                        'description': 'Number of items per page'
+                    }
+                ])
+            
+            # Filtering parameters (basic inference)
+            if view.filter_backends:
+                # Add common filter parameters
+                if view.model:
+                    # Add status filter if common
+                    parameters.append({
+                        'name': 'status',
+                        'in': 'query',
+                        'required': False,
+                        'type': 'string',
+                        'description': 'Filter by status'
+                    })
+        
+        return parameters
+    
+    def _build_endpoint_request_schema(self, endpoint: ViewEndpoint, view: ViewInfo) -> Optional[Dict]:
+        """Build request schema for endpoints that accept data"""
+        if endpoint.method in ['POST', 'PUT', 'PATCH']:
+            if endpoint.serializer_class:
+                return {
+                    'type': 'object',
+                    '$ref': f"#/components/schemas/{endpoint.serializer_class}Request"
+                }
+            else:
+                # Generic request schema
+                return {
+                    'type': 'object',
+                    'properties': {},
+                    'description': f"Request data for {endpoint.method} {endpoint.path}"
+                }
+        return None
+    
+    def _build_endpoint_response_schema(self, endpoint: ViewEndpoint, view: ViewInfo) -> Dict:
+        """Build response schema for an endpoint"""
+        if endpoint.method == 'DELETE':
+            return {
+                'type': 'object',
+                'properties': {},
+                'description': 'No content returned'
+            }
+        
+        if endpoint.serializer_class or endpoint.response_serializer:
+            serializer_name = endpoint.response_serializer or endpoint.serializer_class
+            
+            # Check if it's a list endpoint
+            if 'list' in endpoint.function_name.lower() or (endpoint.method == 'GET' and endpoint.path.endswith('/')):
+                return {
+                    'type': 'object',
+                    'properties': {
+                        'count': {
+                            'type': 'integer',
+                            'description': 'Total number of items'
+                        },
+                        'next': {
+                            'type': 'string',
+                            'nullable': True,
+                            'description': 'URL to next page'
+                        },
+                        'previous': {
+                            'type': 'string',
+                            'nullable': True,
+                            'description': 'URL to previous page'
+                        },
+                        'results': {
+                            'type': 'array',
+                            'items': {
+                                '$ref': f"#/components/schemas/{serializer_name}"
+                            }
+                        }
+                    }
+                }
+            else:
+                return {
+                    '$ref': f"#/components/schemas/{serializer_name}"
+                }
+        
+        # Generic response
+        return {
+            'type': 'object',
+            'properties': {},
+            'description': f"Response from {endpoint.method} {endpoint.path}"
+        }
+    
+    def _determine_status_codes(self, endpoint: ViewEndpoint) -> List[int]:
+        """Determine possible status codes for an endpoint"""
+        base_codes = [400, 401, 403, 500]  # Common error codes
+        
+        if endpoint.method == 'GET':
+            return [200, 404] + base_codes
+        elif endpoint.method == 'POST':
+            return [201, 400] + base_codes
+        elif endpoint.method in ['PUT', 'PATCH']:
+            return [200, 404] + base_codes
+        elif endpoint.method == 'DELETE':
+            return [204, 404] + base_codes
+        
+        return [200] + base_codes
+    
+    def _extract_authentication_info(self, endpoint: ViewEndpoint, view: ViewInfo) -> Dict:
+        """Extract authentication information"""
+        auth_info = {
+            'required': True,  # Default assumption
+            'types': []
+        }
+        
+        auth_classes = endpoint.authentication_classes or view.authentication_classes
+        
+        if auth_classes:
+            for auth_class in auth_classes:
+                if 'Token' in auth_class:
+                    auth_info['types'].append('token')
+                elif 'Session' in auth_class:
+                    auth_info['types'].append('session')
+                elif 'JWT' in auth_class:
+                    auth_info['types'].append('jwt')
+                elif 'Basic' in auth_class:
+                    auth_info['types'].append('basic')
+                else:
+                    auth_info['types'].append('custom')
+        
+        if not auth_info['types']:
+            auth_info['types'] = ['token']  # Default assumption
+        
+        return auth_info
+    
+    def _extract_permission_info(self, endpoint: ViewEndpoint, view: ViewInfo) -> Dict:
+        """Extract permission information"""
+        permission_info = {
+            'required_permissions': [],
+            'description': ''
+        }
+        
+        permission_classes = endpoint.permission_classes or view.permission_classes
+        
+        if permission_classes:
+            for permission_class in permission_classes:
+                if 'IsAuthenticated' in permission_class:
+                    permission_info['required_permissions'].append('authenticated')
+                elif 'IsOwner' in permission_class:
+                    permission_info['required_permissions'].append('owner')
+                elif 'IsStaff' in permission_class:
+                    permission_info['required_permissions'].append('staff')
+                elif 'IsAdmin' in permission_class:
+                    permission_info['required_permissions'].append('admin')
+                elif 'ReadOnly' in permission_class:
+                    permission_info['required_permissions'].append('read_only')
+                else:
+                    permission_info['required_permissions'].append('custom')
+        
+        # Generate description
+        if permission_info['required_permissions']:
+            permission_info['description'] = f"Requires: {', '.join(permission_info['required_permissions'])}"
+        else:
+            permission_info['description'] = "No specific permissions required"
+        
+        return permission_info
+    
+    def _extract_filter_info(self, view: ViewInfo) -> Dict:
+        """Extract filtering information"""
+        filter_info = {
+            'enabled': bool(view.filter_backends),
+            'search_fields': view.search_fields,
+            'ordering_fields': view.ordering_fields,
+            'filterset_class': view.filterset_class,
+            'backends': view.filter_backends
+        }
+        
+        return filter_info
+    
+    def _extract_pagination_info(self, view: ViewInfo) -> Dict:
+        """Extract pagination information"""
+        pagination_info = {
+            'enabled': view.pagination_class is not None,
+            'pagination_class': view.pagination_class,
+            'style': 'page_number'  # Default Django REST framework style
+        }
+        
+        if view.pagination_class:
+            if 'Limit' in view.pagination_class:
+                pagination_info['style'] = 'limit_offset'
+            elif 'Cursor' in view.pagination_class:
+                pagination_info['style'] = 'cursor'
+        
+        return pagination_info
+    
+    def generate_endpoint_examples(self, view: ViewInfo) -> Dict[str, Dict]:
+        """Generate example requests and responses for view endpoints"""
+        examples = {}
+        
+        for endpoint in view.endpoints:
+            endpoint_key = f"{endpoint.method}_{endpoint.path.replace('/', '_').replace('{', '').replace('}', '').strip('_')}"
+            
+            endpoint_examples = {
+                'request_examples': self._generate_request_examples(endpoint, view),
+                'response_examples': self._generate_response_examples(endpoint, view),
+                'curl_examples': self._generate_curl_examples(endpoint, view)
+            }
+            
+            examples[endpoint_key] = endpoint_examples
+        
+        return examples
+    
+    def _generate_request_examples(self, endpoint: ViewEndpoint, view: ViewInfo) -> Dict:
+        """Generate request examples for an endpoint"""
+        examples = {}
+        
+        if endpoint.method in ['POST', 'PUT', 'PATCH']:
+            if endpoint.serializer_class:
+                examples['basic'] = {
+                    'description': f'Basic {endpoint.method} request',
+                    'content_type': 'application/json',
+                    'data': self._generate_example_request_data(endpoint, view)
+                }
+        
+        return examples
+    
+    def _generate_response_examples(self, endpoint: ViewEndpoint, view: ViewInfo) -> Dict:
+        """Generate response examples for an endpoint"""
+        examples = {}
+        
+        # Success response
+        examples['success'] = {
+            'status_code': 200 if endpoint.method == 'GET' else (201 if endpoint.method == 'POST' else 200),
+            'description': 'Successful response',
+            'data': self._generate_example_response_data(endpoint, view)
+        }
+        
+        # Error responses
+        if endpoint.method in ['POST', 'PUT', 'PATCH']:
+            examples['validation_error'] = {
+                'status_code': 400,
+                'description': 'Validation error',
+                'data': {
+                    'error': {
+                        'field_name': ['This field is required.']
+                    }
+                }
+            }
+        
+        if 'retrieve' in endpoint.function_name or '{' in endpoint.path:
+            examples['not_found'] = {
+                'status_code': 404,
+                'description': 'Resource not found',
+                'data': {
+                    'detail': 'Not found.'
+                }
+            }
+        
+        return examples
+    
+    def _generate_curl_examples(self, endpoint: ViewEndpoint, view: ViewInfo) -> List[str]:
+        """Generate curl command examples"""
+        curl_examples = []
+        
+        base_url = "https://api.example.com"
+        headers = ["-H 'Authorization: Token your-token-here'", "-H 'Content-Type: application/json'"]
+        
+        if endpoint.method == 'GET':
+            curl_cmd = f"curl -X GET {base_url}{endpoint.path}"
+            if headers:
+                curl_cmd += " " + " ".join(headers[:1])  # Just auth header for GET
+            curl_examples.append(curl_cmd)
+            
+        elif endpoint.method in ['POST', 'PUT', 'PATCH']:
+            data = self._generate_example_request_data(endpoint, view)
+            curl_cmd = f"curl -X {endpoint.method} {base_url}{endpoint.path}"
+            curl_cmd += " " + " ".join(headers)
+            if data:
+                import json
+                curl_cmd += f" -d '{json.dumps(data)}'"
+            curl_examples.append(curl_cmd)
+            
+        elif endpoint.method == 'DELETE':
+            curl_cmd = f"curl -X DELETE {base_url}{endpoint.path}"
+            curl_cmd += " " + " ".join(headers[:1])  # Just auth header
+            curl_examples.append(curl_cmd)
+        
+        return curl_examples
+    
+    def _generate_example_request_data(self, endpoint: ViewEndpoint, view: ViewInfo) -> Dict:
+        """Generate example request data based on the endpoint"""
+        # This is a simplified example - in practice, you'd use the serializer schema
+        if view.model:
+            model_name = view.model.lower()
+            return {
+                'name': f'Example {model_name}',
+                'description': f'This is an example {model_name}',
+                'status': 'active'
+            }
+        
+        return {'field': 'value'}
+    
+    def _generate_example_response_data(self, endpoint: ViewEndpoint, view: ViewInfo) -> Dict:
+        """Generate example response data based on the endpoint"""
+        if endpoint.method == 'DELETE':
+            return {}
+        
+        # List endpoint
+        if 'list' in endpoint.function_name.lower() or (endpoint.method == 'GET' and endpoint.path.endswith('/')):
+            return {
+                'count': 10,
+                'next': None,
+                'previous': None,
+                'results': [self._generate_single_item_example(view)]
+            }
+        
+        # Detail endpoint
+        return self._generate_single_item_example(view)
+    
+    def _generate_single_item_example(self, view: ViewInfo) -> Dict:
+        """Generate example data for a single item"""
+        if view.model:
+            model_name = view.model.lower()
+            return {
+                'id': 1,
+                'name': f'Example {model_name}',
+                'description': f'This is an example {model_name}',
+                'status': 'active',
+                'created_at': '2023-12-01T12:00:00Z',
+                'updated_at': '2023-12-01T12:00:00Z'
+            }
+        
+        return {
+            'id': 1,
+            'name': 'Example Item',
+            'created_at': '2023-12-01T12:00:00Z'
+        }

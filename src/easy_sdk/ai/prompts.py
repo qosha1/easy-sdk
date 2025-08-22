@@ -214,6 +214,273 @@ For each component, identify:
 Present the results as a structured dependency graph that can guide documentation organization and help developers understand the system architecture.
 """
 
+    API_STRUCTURE_ANALYSIS = """
+Analyze the overall Django REST API structure and identify patterns for SDK generation.
+
+API Structure Data:
+- Total Apps: {total_apps}
+- App Names: {app_names}
+- Structure Details: {structure_data}
+
+Please analyze and provide insights in JSON format:
+
+```json
+{{
+  "common_patterns": [
+    "List of common API patterns found (CRUD, nested resources, etc.)"
+  ],
+  "auth_strategy": "token|session|oauth|jwt|basic",
+  "base_url_pattern": "/api/v1 or similar base pattern",
+  "error_handling": {{
+    "standard_format": "How errors are typically formatted",
+    "common_codes": [400, 401, 403, 404, 500],
+    "custom_error_fields": ["field_name"]
+  }},
+  "pagination_strategy": "page_number|offset_limit|cursor|none",
+  "pagination_params": {{
+    "page_param": "page",
+    "size_param": "page_size",
+    "default_size": 20
+  }},
+  "naming_conventions": {{
+    "url_style": "snake_case|kebab-case|camelCase",
+    "field_style": "snake_case|camelCase",
+    "endpoint_patterns": ["common patterns like /api/app/resource/"]
+  }},
+  "data_patterns": {{
+    "timestamp_format": "ISO 8601 or other format",
+    "id_field_type": "integer|uuid|string",
+    "common_field_names": ["id", "created_at", "updated_at"]
+  }},
+  "filtering_and_search": {{
+    "supports_filtering": true,
+    "filter_params": ["common filter parameter names"],
+    "supports_search": true,
+    "search_params": ["q", "search"]
+  }},
+  "sdk_generation_insights": {{
+    "complexity_level": "simple|moderate|complex",
+    "recommended_client_structure": "single|multi_app|service_based",
+    "async_operations": ["endpoints that should be async"],
+    "bulk_operations": ["endpoints that support bulk operations"],
+    "file_upload_patterns": ["endpoints that handle file uploads"],
+    "websocket_endpoints": ["real-time endpoints if any"]
+  }}
+}}
+```
+
+Focus on identifying patterns that will help generate clean, efficient SDK code. Look for:
+
+1. **Consistency patterns** - How similar endpoints are structured
+2. **Authentication flows** - How authentication is handled across the API
+3. **Error patterns** - Consistent error response formats
+4. **Data relationships** - How different resources relate to each other
+5. **Operation patterns** - CRUD operations, bulk operations, nested resources
+6. **Performance considerations** - Pagination, filtering, caching headers
+
+Provide specific, actionable insights that an SDK generator can use to create high-quality client libraries.
+"""
+
+    MODEL_ANALYSIS = """
+Analyze the following Django model code and provide comprehensive information about its structure, purpose, and field relationships.
+
+Model Code:
+```python
+{model_code}
+```
+
+Context Information:
+- App Name: {app_name}
+- Model Name: {model_name}
+- File Path: {file_path}
+- Model Fields: {fields}
+- Related Models: {relationships}
+
+Please provide analysis in the following format:
+
+## Business Purpose
+Describe what this model represents in the business domain:
+- What real-world entity or concept does this model represent?
+- How does it fit into the overall application architecture?
+- What business processes or workflows does it support?
+
+## Field Analysis
+For each field, provide:
+- Business purpose and meaning
+- Why specific validation rules are needed
+- Examples of typical values
+- How it relates to user workflows
+- API documentation description that's user-friendly
+
+## Relationships Analysis
+Analyze model relationships:
+- Foreign key relationships and their business meaning
+- Many-to-many relationships and why they exist
+- One-to-one relationships and their purpose
+- How these relationships support business processes
+
+## Usage Patterns
+Identify common usage patterns:
+- How is this model typically created?
+- What are common query patterns?
+- How does it integrate with other models?
+- What are typical lifecycle states?
+
+## API Integration
+Consider how this model appears in APIs:
+- What fields should be exposed in list vs detail views?
+- What fields are safe for public API exposure?
+- What computed properties might be useful?
+- How should this model be represented in different API contexts?
+
+Focus on providing insights that help generate better API documentation and understand the business context.
+"""
+
+    COMPONENT_RELATIONSHIP_ANALYSIS = """
+Analyze the relationships between Django models, serializers, and views in this app to understand the data flow and API structure.
+
+App Name: {app_name}
+
+Models: {models}
+Serializers: {serializers}
+Views: {views}
+
+Component Data:
+{component_data}
+
+Please analyze and provide insights in the following format:
+
+## Data Flow Analysis
+Map how data flows through the application:
+- From models through serializers to API responses
+- How user input flows from API requests through serializers to models
+- Where data transformation happens
+- What validation occurs at each stage
+
+## Component Dependencies
+Identify dependencies between components:
+- Which serializers use which models?
+- Which views use which serializers?
+- What nested relationships exist?
+- Where are circular dependencies or complex relationships?
+
+## API Endpoint Mapping
+For each view, identify:
+- What serializers it uses for input vs output
+- What models it operates on
+- What business operations it performs
+- How it fits into the overall API structure
+
+## Consistency Analysis
+Analyze consistency across components:
+- Are naming conventions consistent?
+- Are similar patterns used across different endpoints?
+- Are there opportunities for consolidation or standardization?
+- What patterns could be documented as best practices?
+
+## Integration Points
+Identify how components integrate:
+- Where do different apps interact?
+- What shared models or serializers exist?
+- How do foreign key relationships affect API design?
+- What cross-cutting concerns exist (permissions, filtering, etc.)?
+
+Focus on insights that help understand the overall API architecture and improve documentation generation.
+"""
+
+    API_INSIGHTS_GENERATION = """
+Analyze the overall Django REST API structure and generate comprehensive insights and recommendations.
+
+API Statistics:
+- Total Models: {total_models}
+- Total Serializers: {total_serializers}
+- Total Views: {total_views}
+- Total Endpoints: {total_endpoints}
+- Apps: {apps}
+
+API Structure:
+{api_structure}
+
+Please provide comprehensive analysis in JSON format:
+
+```json
+{{
+  "complexity_assessment": "simple|moderate|complex",
+  "architectural_patterns": [
+    "List of architectural patterns identified (REST, CRUD, nested resources, etc.)"
+  ],
+  "api_maturity_level": {{
+    "level": "basic|intermediate|advanced",
+    "reasoning": "Why this maturity level was assigned",
+    "improvements_needed": ["List of areas for improvement"]
+  }},
+  "consistency_analysis": {{
+    "naming_conventions": {{
+      "consistent": true,
+      "issues": ["Any naming inconsistencies found"],
+      "recommendations": ["Suggestions for improvement"]
+    }},
+    "endpoint_patterns": {{
+      "consistent": true,
+      "common_patterns": ["List of common URL/endpoint patterns"],
+      "exceptions": ["Any endpoints that don't follow patterns"]
+    }},
+    "response_formats": {{
+      "consistent": true,
+      "standard_format": "Description of standard response format",
+      "variations": ["Any response format variations"]
+    }}
+  }},
+  "security_analysis": {{
+    "authentication_strategy": "token|session|jwt|oauth|mixed",
+    "permission_patterns": ["Common permission patterns used"],
+    "security_recommendations": [
+      "Specific security improvements needed"
+    ]
+  }},
+  "performance_considerations": {{
+    "potential_n_plus_1_queries": ["Endpoints that might have N+1 query issues"],
+    "pagination_strategy": "Description of pagination approach",
+    "caching_opportunities": ["Where caching could be beneficial"],
+    "optimization_recommendations": ["Performance improvement suggestions"]
+  }},
+  "documentation_recommendations": {{
+    "priority_endpoints": ["Most important endpoints to document first"],
+    "complex_workflows": ["Multi-step processes that need workflow documentation"],
+    "example_scenarios": ["Real-world use cases to include in docs"],
+    "integration_guides": ["Types of integration guides needed"]
+  }},
+  "sdk_generation_insights": {{
+    "client_architecture": "single|multi_service|modular",
+    "async_requirements": ["Endpoints that should be async in SDKs"],
+    "error_handling_patterns": ["Common error patterns to handle"],
+    "retry_strategies": ["Endpoints that need retry logic"],
+    "rate_limiting_considerations": ["Rate limiting patterns to implement"],
+    "authentication_flows": ["Auth flows to implement in SDKs"]
+  }},
+  "api_evolution_recommendations": {{
+    "versioning_strategy": "Recommended API versioning approach",
+    "breaking_change_risks": ["Areas where breaking changes might occur"],
+    "extensibility_patterns": ["How the API can be extended safely"],
+    "deprecation_strategy": ["How to handle deprecated endpoints"]
+  }},
+  "business_domain_insights": {{
+    "core_entities": ["Main business entities in the API"],
+    "business_workflows": ["Key business processes supported"],
+    "user_personas": ["Types of API consumers"],
+    "integration_scenarios": ["Common integration patterns"]
+  }}
+}}
+```
+
+Focus on actionable insights that help with:
+1. Generating high-quality API documentation
+2. Creating robust SDKs and client libraries
+3. Improving API design and consistency
+4. Planning future API evolution
+5. Understanding business context and user needs
+"""
+
     @classmethod
     def get_prompt(cls, template_name: str, **kwargs) -> str:
         """
