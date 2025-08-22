@@ -5,7 +5,7 @@ An intelligent Python library that automatically generates comprehensive API doc
 for Django backend repositories by leveraging AI and structural code analysis.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "Django Docs Generator Team"
 __email__ = "contact@example.com"
 
